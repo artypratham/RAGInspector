@@ -12,8 +12,14 @@ export const annotationsAtom = atom<AnnotationState>({
   default: {}
 })
 
-export const rawInputAtom = atom<string>({
-  key: "rawInputAtom",
+
+export const schemaInputAtom = atom<string>({
+  key: "schemaOutputAtom",
+  default: ""
+})
+
+export const outputJsonAtom = atom<string>({
+  key: "outputJsonAtom",
   default: ""
 })
 

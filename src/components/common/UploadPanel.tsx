@@ -7,6 +7,7 @@ import { api } from "../../services/api"
 import { Activity, Upload, FileText, Sparkles, AlertCircle, X, Save, CheckCircle } from "lucide-react"
 
 const SAMPLE_SCHEMA = `{
+const SAMPLE_SCHEMA = `{
   "input_schema": {
     "borrower_name": {
       "type": "string",
@@ -18,7 +19,9 @@ const SAMPLE_SCHEMA = `{
     }
   }
 }`
+}`
 
+const SAMPLE_OUTPUT = `{
 const SAMPLE_OUTPUT = `{
   "record_id": "rec_001",
   "doc_id": "loan_application_123.pdf",
@@ -50,6 +53,8 @@ const SAMPLE_OUTPUT = `{
 }`
 
 export default function UploadPanel() {
+  const [schemaInput, setSchemaInput] = useRecoilState(schemaInputAtom)
+  const [outputJson, setOutputJson] = useRecoilState(outputJsonAtom)
   const [schemaInput, setSchemaInput] = useRecoilState(schemaInputAtom)
   const [outputJson, setOutputJson] = useRecoilState(outputJsonAtom)
   const [, setRecords] = useRecoilState(recordsAtom)
@@ -101,12 +106,25 @@ export default function UploadPanel() {
       setSchemaInput(text)
     }
     reader.readAsText(file)
+    setSchemaInput(SAMPLE_SCHEMA)
+    setOutputJson(SAMPLE_OUTPUT)
   }
 
+  function handleSchemaFileUpload(file: File) {
+    const reader = new FileReader()
+    reader.onload = (e) => {
+      const text = e.target?.result as string
+      setSchemaInput(text)
+    }
+    reader.readAsText(file)
+  }
+
+  function handleOutputFileUpload(file: File) {
   function handleOutputFileUpload(file: File) {
     const reader = new FileReader()
     reader.onload = (e) => {
       const text = e.target?.result as string
+      setOutputJson(text)
       setOutputJson(text)
     }
     reader.readAsText(file)
@@ -123,11 +141,24 @@ export default function UploadPanel() {
   }
 
   function handleOutputDrop(e: React.DragEvent) {
+  function handleSchemaDrop(e: React.DragEvent) {
     e.preventDefault()
+    setIsDraggingSchema(false)
+
+    const file = e.dataTransfer.files[0]
+    if (file && (file.type === "application/json" || file.name.endsWith(".txt") || file.name.endsWith(".log"))) {
+      handleSchemaFileUpload(file)
+    }
+  }
+
+  function handleOutputDrop(e: React.DragEvent) {
+    e.preventDefault()
+    setIsDraggingOutput(false)
     setIsDraggingOutput(false)
 
     const file = e.dataTransfer.files[0]
     if (file && (file.type === "application/json" || file.name.endsWith(".txt") || file.name.endsWith(".log"))) {
+      handleOutputFileUpload(file)
       handleOutputFileUpload(file)
     }
   }
@@ -142,10 +173,23 @@ export default function UploadPanel() {
   }
 
   function handleOutputDragOver(e: React.DragEvent) {
+  function handleSchemaDragOver(e: React.DragEvent) {
     e.preventDefault()
+    setIsDraggingSchema(true)
+  }
+
+  function handleSchemaDragLeave() {
+    setIsDraggingSchema(false)
+  }
+
+  function handleOutputDragOver(e: React.DragEvent) {
+    e.preventDefault()
+    setIsDraggingOutput(true)
     setIsDraggingOutput(true)
   }
 
+  function handleOutputDragLeave() {
+    setIsDraggingOutput(false)
   function handleOutputDragLeave() {
     setIsDraggingOutput(false)
   }
@@ -165,11 +209,16 @@ export default function UploadPanel() {
         </div>
 
         <div className="flex justify-center">
+        <div className="flex justify-center">
           <button
             onClick={loadSampleData}
             className="group relative overflow-hidden rounded-xl border border-slate-700/50 bg-slate-900/50 backdrop-blur-sm hover:border-purple-500/50 transition-all duration-300 px-8 py-3"
+            className="group relative overflow-hidden rounded-xl border border-slate-700/50 bg-slate-900/50 backdrop-blur-sm hover:border-purple-500/50 transition-all duration-300 px-8 py-3"
           >
             <div className="absolute inset-0 bg-gradient-to-br from-purple-500 to-pink-600 opacity-0 group-hover:opacity-10 transition-opacity" />
+            <div className="relative flex items-center gap-3">
+              <Sparkles className="w-5 h-5 text-purple-400" />
+              <span className="text-white font-semibold">Load Sample Data</span>
             <div className="relative flex items-center gap-3">
               <Sparkles className="w-5 h-5 text-purple-400" />
               <span className="text-white font-semibold">Load Sample Data</span>
@@ -186,12 +235,95 @@ export default function UploadPanel() {
         />
         <input
           ref={outputFileInputRef}
+          ref={schemaFileInputRef}
           type="file"
           accept=".json,.txt,.log"
+          onChange={(e) => e.target.files?.[0] && handleSchemaFileUpload(e.target.files[0])}
+          className="hidden"
+        />
+        <input
+          ref={outputFileInputRef}
+          type="file"
+          accept=".json,.txt,.log"
+          onChange={(e) => e.target.files?.[0] && handleOutputFileUpload(e.target.files[0])}
           onChange={(e) => e.target.files?.[0] && handleOutputFileUpload(e.target.files[0])}
           className="hidden"
         />
 
+        <div className="grid md:grid-cols-2 gap-6">
+          {/* Schema Input */}
+          <div className="space-y-3">
+            <div className="flex items-center justify-between">
+              <h3 className="text-lg font-bold text-white flex items-center gap-2">
+                <div className="w-2 h-2 rounded-full bg-emerald-500" />
+                Input Schema
+              </h3>
+              <button
+                onClick={() => schemaFileInputRef.current?.click()}
+                className="flex items-center gap-2 px-3 py-1.5 rounded-lg border border-slate-700/50 bg-slate-900/50 hover:border-cyan-500/50 transition-all text-sm text-slate-400 hover:text-white"
+              >
+                <Upload className="w-4 h-4" />
+                Upload
+              </button>
+            </div>
+            <div
+              onDrop={handleSchemaDrop}
+              onDragOver={handleSchemaDragOver}
+              onDragLeave={handleSchemaDragLeave}
+              className={`relative overflow-hidden rounded-xl border-2 border-dashed transition-all duration-300 ${
+                isDraggingSchema
+                  ? "border-emerald-500 bg-emerald-500/10"
+                  : "border-slate-700/50 bg-slate-900/50"
+              } backdrop-blur-sm`}
+            >
+              <div className="absolute top-3 right-3">
+                <FileText className="w-4 h-4 text-slate-500" />
+              </div>
+              <textarea
+                className="w-full h-80 p-4 bg-transparent border-0 font-mono text-xs text-white placeholder-slate-500 focus:outline-none focus:ring-0 resize-none"
+                placeholder='Paste your input schema here...\n\nExample:\n{\n  "input_schema": {\n    "field_name": {\n      "type": "string",\n      "description": "..."\n    }\n  }\n}'
+                value={schemaInput}
+                onChange={e => setSchemaInput(e.target.value)}
+              />
+            </div>
+          </div>
+
+          {/* Output JSON Input */}
+          <div className="space-y-3">
+            <div className="flex items-center justify-between">
+              <h3 className="text-lg font-bold text-white flex items-center gap-2">
+                <div className="w-2 h-2 rounded-full bg-cyan-500" />
+                Output JSON
+              </h3>
+              <button
+                onClick={() => outputFileInputRef.current?.click()}
+                className="flex items-center gap-2 px-3 py-1.5 rounded-lg border border-slate-700/50 bg-slate-900/50 hover:border-cyan-500/50 transition-all text-sm text-slate-400 hover:text-white"
+              >
+                <Upload className="w-4 h-4" />
+                Upload
+              </button>
+            </div>
+            <div
+              onDrop={handleOutputDrop}
+              onDragOver={handleOutputDragOver}
+              onDragLeave={handleOutputDragLeave}
+              className={`relative overflow-hidden rounded-xl border-2 border-dashed transition-all duration-300 ${
+                isDraggingOutput
+                  ? "border-cyan-500 bg-cyan-500/10"
+                  : "border-slate-700/50 bg-slate-900/50"
+              } backdrop-blur-sm`}
+            >
+              <div className="absolute top-3 right-3">
+                <FileText className="w-4 h-4 text-slate-500" />
+              </div>
+              <textarea
+                className="w-full h-80 p-4 bg-transparent border-0 font-mono text-xs text-white placeholder-slate-500 focus:outline-none focus:ring-0 resize-none"
+                placeholder='Paste your extraction output here...\n\nExample:\n{\n  "record_id": "...",\n  "success": true,\n  "extracted_fields": {...}\n}'
+                value={outputJson}
+                onChange={e => setOutputJson(e.target.value)}
+              />
+            </div>
+          </div>
         <div className="grid md:grid-cols-2 gap-6">
           {/* Schema Input */}
           <div className="space-y-3">
