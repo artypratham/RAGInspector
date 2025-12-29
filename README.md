@@ -1,152 +1,233 @@
-🔍 RAGInspector
-A Diagnostic Framework for Evaluating RAG + LLM Pipelines
+# 🔍 RAG Inspector
+
+**A Production-Ready Diagnostic Framework for Evaluating RAG + LLM Pipelines**
+
+RAG Inspector is a full-stack web application that provides field-level human annotation, persistent storage, and comprehensive reporting for evaluating Retrieval-Augmented Generation (RAG) systems. Unlike traditional metrics, it separates **faithfulness**, **retrieval relevance**, and **end-to-end correctness** to enable targeted improvements.
+
+---
+
+## 🎯 What RAG Inspector Does
+
+Most RAG evaluations only answer: *"Is the output correct?"*
+
+RAG Inspector answers the **actionable questions**:
+
+- ❓ **Was the retrieved context relevant?**
+- ❓ **Was the LLM faithful to that context?**
+- ❓ **Is the failure caused by retrieval, generation, or both?**
+- ❓ **Which fields, documents, or schemas fail most often?**
+
+Built for:
+- RAG system builders
+- LLM platform engineers
+- Document intelligence teams
+- FinTech / Legal / Enterprise AI use cases
+
+---
+
+## ✨ Key Features
+
+### 📝 Human-in-the-Loop Annotation Workflow
+1. Upload schema + RAG output JSON
+2. Annotate each extracted field as **Correct** or **Incorrect**
+3. For incorrect fields, specify:
+   - Expected value
+   - Error category (hallucination, missing context, partial extraction, etc.)
+   - Model confidence level
+4. Submit all annotations at once
+5. **Annotations become read-only** after submission (cannot be changed)
+6. Access historical extractions anytime from the sidebar
+
+### 📊 Comprehensive Metrics Dashboard
+- **Faithfulness Score**: How well the model grounds responses in retrieved context
+- **Retrieval Precision**: Quality of document retrieval system
+- **Field Accuracy**: Percentage of correctly extracted fields
+- **Success Rate**: Records processed without errors
+- **Error Analysis**: Categorized breakdowns by error type
+
+### 📄 Export Reports in Multiple Formats
+- **PDF Report**: Professional diagnostic report with:
+  - Executive summary
+  - Key performance metrics with formulas
+  - Diagnostic framework analysis
+  - Error breakdowns
+  - Human annotation details
+  - Actionable recommendations
+- **JSON Export**: Raw annotation data for programmatic analysis
+
+### 🗂️ Persistent History
+- All submitted extractions saved to PostgreSQL database
+- Sidebar shows unique submitted extractions with annotation stats
+- Click any historical extraction to view annotations (read-only)
+- Never lose your evaluation work
+
+### 🔐 Multi-User Authentication
+- Secure signup/login with JWT authentication
+- Each user has isolated extractions and annotations
+- Protected routes ensure data privacy
+
+---
+
+## 🧠 Diagnostic Framework
+
+RAG Inspector evaluates pipelines along two orthogonal axes:
+
+### 1️⃣ Faithfulness (Generation Quality)
+```
+Faithfulness = Correct Fields / Total Annotated Fields
+```
+- **High faithfulness** → Model respects context
+- **Low faithfulness** → Hallucination or context misuse
+
+### 2️⃣ Retrieval Precision (Context Relevance)
+```
+Retrieval Precision = Relevant Context / Retrieved Context
+```
+- **High precision** → Retrieval system finds relevant chunks
+- **Low precision** → Retrieval needs optimization
+
+### 3️⃣ End-to-End Accuracy
+```
+Field Accuracy = Correct Fields / Total Fields
+```
+
+### 🧩 Diagnostic Interpretation Matrix
+
+| Faithfulness | Retrieval | Diagnosis |
+|-------------|-----------|-----------|
+| High | High | ✅ Pipeline Healthy |
+| High | Low | ⚠️ Retrieval Problem |
+| Low | High | ⚠️ Generation/Hallucination Problem |
+| Low | Low | 🚨 Entire Pipeline Broken |
+
+---
+
+## 🛠️ Tech Stack
+
+### Frontend
+- **React 18** with TypeScript
+- **Recoil** for state management
+- **Tailwind CSS** for styling
+- **Vite** for fast development
+- **jsPDF** for PDF report generation
+- **Lucide Icons** for UI
+
+### Backend
+- **Node.js** with Express
+- **TypeScript** for type safety
+- **Prisma ORM** for database management
+- **PostgreSQL** for persistent storage
+- **JWT** for authentication
+- **Zod** for request validation
+- **bcrypt** for password hashing
+
+---
 
-RAGInspector is an interactive diagnostic tool that x-rays your Retrieval-Augmented Generation (RAG) pipeline to reveal where it breaks and why — retrieval, generation, or the full pipeline.
+## 🚀 Quick Start (Development)
 
-Unlike traditional accuracy metrics, RAGInspector separates faithfulness, retrieval relevance, and end-to-end correctness, enabling targeted fixes instead of blind tuning.
+### Prerequisites
+- Node.js 18+ and npm
+- PostgreSQL database (local or cloud)
 
-🚀 Why RAGInspector?
+### 1. Clone the Repository
+```bash
+git clone <your-repo-url>
+cd RAGInspector
+```
 
-Most RAG evaluations answer only one question:
+### 2. Setup Frontend
+```bash
+# Install dependencies
+npm install
 
-“Is the output correct?”
+# Create environment file
+cp .env.example .env
 
-RAGInspector answers the harder (and more useful) questions:
+# Add your backend API URL to .env
+# VITE_API_URL=http://localhost:5000/api
+```
 
-❓ Was the retrieved context relevant?
+### 3. Setup Backend
+```bash
+cd backend
 
-❓ Was the LLM faithful to that context?
+# Install dependencies
+npm install
 
-❓ Is the failure caused by retrieval, generation, or both?
+# Create environment file
+cp .env.example .env
 
-❓ Which fields, documents, or schemas are breaking most often?
+# Configure database and JWT secret in .env
+# DATABASE_URL=postgresql://user:password@localhost:5432/raginspector
+# JWT_SECRET=your-super-secret-key-at-least-32-characters-long
 
-This tool is built for:
+# Run database migrations
+npx prisma migrate dev
 
-RAG system builders
+# Generate Prisma client
+npx prisma generate
+```
 
-LLM platform engineers
+### 4. Run Development Servers
 
-Document intelligence teams
+**Terminal 1 - Backend:**
+```bash
+cd backend
+npm run dev
+# Backend runs on http://localhost:5000
+```
 
-FinTech / Legal / Enterprise AI use cases
+**Terminal 2 - Frontend:**
+```bash
+npm run dev
+# Frontend runs on http://localhost:5173
+```
 
-🧠 Core Diagnostic Framework
+### 5. Open Application
+Visit [http://localhost:5173](http://localhost:5173) and sign up to start annotating!
 
-RAGInspector evaluates a pipeline along two orthogonal axes:
+---
 
-1️⃣ Faithfulness (Generation Quality)
+## 📋 Usage Workflow
 
-Did the model generate answers grounded in the retrieved source?
+### Step 1: Upload Data
+Paste or upload two JSON inputs:
+1. **Schema JSON**: Defines expected fields with descriptions
+2. **Output JSON**: RAG pipeline output with extractions, confidence scores, and retrieved context
 
-Faithfulness = CorrectFields / (CorrectFields + IncorrectFields)
+### Step 2: Annotate Fields
+- Click **Correct** (✓) or **Incorrect** (✗) for each extracted field
+- For incorrect fields:
+  - Specify the expected value
+  - Choose error category (hallucination, missing context, partial extraction, etc.)
+  - View retrieved context and confidence scores
 
+### Step 3: Submit Annotations
+- Click **Submit All Annotations** when done
+- Annotations are saved permanently to database
+- Extraction becomes read-only
 
-High faithfulness → Model respects context
+### Step 4: Download Reports
+- **Download PDF Report**: Comprehensive diagnostic report
+- **Download JSON**: Raw annotation data for analysis
 
-Low faithfulness → Hallucination or misuse of context
+### Step 5: View History
+- Click sidebar toggle to view all submitted extractions
+- Click any extraction to view its annotations (read-only)
+- See annotation statistics (correct/incorrect/total)
 
-2️⃣ Relevance (Retrieval Quality — Proxy-Based)
+### Step 6: New Analysis
+- Click **New Analysis** to start fresh
+- Upload new schema/output JSONs and repeat
 
-Because embedding similarity is not always available at inference time,
-RAGInspector uses model-reported confidence + provenance as a proxy signal.
+---
 
-Relevance ≈ Average Field Confidence
+## 📂 Input Format
 
+RAG Inspector expects raw pipeline logs in the following format:
 
-⚠️ This is a heuristic, not ground truth — and the UI explicitly surfaces this limitation.
-
-3️⃣ End-to-End Accuracy
-
-Out of everything we expected, how much did the system actually get right?
-
-EndToEndAccuracy = CorrectFields / TotalFields
-
-🧩 Diagnostic Interpretation Matrix
-Faithfulness	Relevance	Diagnosis
-High	High	✅ Pipeline Healthy (focus on edge cases)
-High	Low	⚠️ Retrieval Problem
-Low	High	⚠️ Generation / Hallucination Problem
-Low	Low	🚨 Entire Pipeline Broken
-
-RAGInspector automatically classifies your pipeline into one of these states.
-
-🖥️ Key Features
-✍️ Field-Level Human Annotation
-
-Mark each extracted field as Correct / Incorrect
-
-Provide:
-
-Expected value
-
-Error category
-
-Free-text reasoning
-
-🔗 Provenance-Aware Inspection
-
-View exact:
-
-Source text
-
-Page number
-
-Section ID
-
-Character offsets
-
-Validate grounding visually
-
-📊 Automatic Metrics
-
-Faithfulness score
-
-Retrieval relevance (proxy)
-
-End-to-end accuracy
-
-Error rate
-
-Annotation progress
-
-🧠 Intelligent Error Analysis
-
-Errors are grouped into actionable categories:
-
-Hallucination
-
-Context missing
-
-Partial extraction
-
-Schema mismatch
-
-Interpretation errors
-
-Source quality issues
-
-Includes retrieval vs generation blame split.
-
-📤 Exportable Evaluation Reports
-
-One-click JSON export
-
-Suitable for:
-
-Offline analysis
-
-CI evaluation
-
-Regression tracking
-
-Model comparisons
-
-📂 Supported Input Format
-
-RAGInspector expects raw pipeline logs, not synthetic datasets.
-
-Schema Block
+### Schema Block
+```json
 {
   "schema": {
     "type": "object",
@@ -154,79 +235,139 @@ Schema Block
       "loan_amount": {
         "type": "string",
         "description": "Total principal amount of the loan"
+      },
+      "borrower_name": {
+        "type": "string",
+        "description": "Name of the borrowing entity"
       }
     }
   }
 }
+```
 
-Response Block
+### Output Block
+```json
 {
   "success": true,
-  "doc_id": "doc_123",
-  "extraction": {
-    "loan_amount": "USD 50,000,000"
-  },
-  "provenance": {
+  "record_id": "rec_001",
+  "doc_id": "loan_agreement_2024",
+  "extracted_fields": {
     "loan_amount": {
-      "confidence": 0.85,
-      "source": {
-        "page_number": 2,
-        "source_text": "The Borrower agrees to borrow USD 50,000,000..."
-      }
+      "value": "USD 50,000,000",
+      "confidence": 0.92
+    },
+    "borrower_name": {
+      "value": "Acme Corporation",
+      "confidence": 0.88
     }
-  }
+  },
+  "retrieved_context": [
+    {
+      "field_name": "loan_amount",
+      "chunk_id": "chunk_42",
+      "page_number": 2,
+      "source_text": "The Borrower agrees to borrow USD 50,000,000...",
+      "score": 0.85
+    }
+  ]
 }
+```
 
+Multiple schema + output pairs can be pasted in a single upload.
 
-Multiple schema + response pairs can be pasted or uploaded in a single run.
+---
 
-🛠️ Tech Stack
+## 🌍 Production Deployment
 
-React
+RAG Inspector can be deployed **100% free** using:
+- **Frontend**: Vercel
+- **Backend**: Render.com or Railway
+- **Database**: Neon PostgreSQL (serverless)
 
-Tailwind CSS
+📖 **See [DEPLOYMENT.md](./DEPLOYMENT.md) for complete step-by-step deployment guide**
 
-Lucide Icons
+---
 
-Fully client-side (no backend required)
+## 📊 Error Categories
 
-⚠️ Honest Limitations (By Design)
+RAG Inspector categorizes errors into actionable types:
 
-RAGInspector is opinionated and transparent:
+| Category | Description | Likely Cause |
+|----------|-------------|--------------|
+| **Hallucination** | Model generated information not in context | Poor faithfulness, LLM issue |
+| **Missing Context** | Required information not retrieved | Retrieval failure |
+| **Partial Extraction** | Only part of the value extracted | Chunking or parsing issue |
+| **Schema Mismatch** | Field type or format incorrect | Schema design or LLM instruction |
+| **Interpretation Error** | Context misunderstood | Prompt engineering needed |
+| **Low Confidence** | Model uncertainty high | Training data or ambiguity |
 
-Relevance is proxy-based, not true semantic similarity
+---
 
-Model confidence can be overestimated
+## 🎯 When to Use RAG Inspector
 
-High confidence ≠ correctness
+✅ **Debugging hallucinations** in production RAG systems
+✅ **Evaluating new chunking strategies** before deployment
+✅ **Comparing prompt versions** with controlled evaluation
+✅ **Auditing document intelligence pipelines** for compliance
+✅ **Building human-verified evaluation datasets** for training
+✅ **Regression testing** after model or retrieval changes
 
-This tool prioritizes observability over theoretical purity
+---
+
+## ⚠️ Honest Limitations (By Design)
+
+RAG Inspector is opinionated and transparent:
+
+- **Relevance uses confidence as proxy**, not true embedding similarity
+- **Model confidence can be overestimated** (high confidence ≠ correctness)
+- **Requires human annotation** for ground truth (not fully automated)
+- **Best suited for structured extraction** (JSON schema-based)
 
 These limitations are explicitly documented and surfaced in the UI.
 
-🎯 When to Use RAGInspector
+---
 
-✅ Debugging hallucinations
-✅ Evaluating new chunking strategies
-✅ Comparing prompt versions
-✅ Auditing document intelligence pipelines
-✅ Building human-verified evaluation datasets
+## 🧪 Future Roadmap
 
-🧪 Future Extensions (Planned)
+- [ ] Embedding similarity integration for true retrieval metrics
+- [ ] Automatic regression comparison across evaluation runs
+- [ ] Model-to-model A/B testing
+- [ ] CI-friendly scoring modes with pass/fail thresholds
+- [ ] Dataset export for training custom evaluators
+- [ ] Bulk import from CSV/Excel
+- [ ] Team collaboration features (shared annotations)
+- [ ] Advanced filtering and search in history
 
-Embedding similarity integration
+---
 
-Automatic regression comparison
+## 🤝 Contributing
 
-Model-to-model evaluation
+Contributions welcome! This project is built for the RAG/LLM community. Please:
 
-CI-friendly scoring modes
+1. Fork the repository
+2. Create a feature branch (`git checkout -b feature/amazing-feature`)
+3. Commit your changes (`git commit -m 'Add amazing feature'`)
+4. Push to the branch (`git push origin feature/amazing-feature`)
+5. Open a Pull Request
 
-Dataset export for training evaluators
+---
 
-🏁 Final Thought
+## 📄 License
 
-You can’t fix a RAG pipeline if you don’t know where it’s lying.
+MIT License - feel free to use in commercial and open-source projects.
 
-RAGInspector doesn’t just score your system —
-it tells you what broke, where, and why.
+---
+
+## 🙏 Acknowledgments
+
+Built for teams who need **observability over theoretical purity** when debugging production RAG systems.
+
+---
+
+## 🏁 Final Thought
+
+> **You can't fix a RAG pipeline if you don't know where it's breaking.**
+
+RAG Inspector doesn't just score your system — it tells you **what broke, where, and why**, with persistent history and professional reports.
+
+**Get started in 5 minutes** → [Deployment Guide](./DEPLOYMENT.md)

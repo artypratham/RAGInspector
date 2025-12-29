@@ -1,8 +1,8 @@
 import { useState } from "react"
-import { useRecoilState } from "recoil"
-import { annotationsAtom } from "../../state/atom"
+import { useRecoilState, useRecoilValue } from "recoil"
+import { annotationsAtom, isAnnotationSubmittedAtom } from "../../state/atom"
 import type { RecordData } from "../../types/pipeline"
-import { CheckCircle, XCircle, AlertTriangle, FileText, Database, TrendingUp } from "lucide-react"
+import { CheckCircle, XCircle, AlertTriangle, FileText, Database, TrendingUp, Lock } from "lucide-react"
 
 const ERROR_CATEGORIES = [
   { value: "hallucination", label: "Hallucination", icon: AlertTriangle, color: "text-red-400" },
@@ -19,6 +19,7 @@ export default function FieldAnnotation({
   field: string
 }) {
   const [annotations, setAnnotations] = useRecoilState(annotationsAtom)
+  const isSubmitted = useRecoilValue(isAnnotationSubmittedAtom)
   const extracted = record.extracted_fields[field]
   const schema = record.input_schema[field]
   const currentAnnotation = annotations[record.record_id]?.[field]
@@ -126,7 +127,7 @@ export default function FieldAnnotation({
                   <div className="flex items-start justify-between mb-1">
                     <span className="text-xs text-slate-500">
                       {ctx.page_number && `Page ${ctx.page_number}`}
-                      {ctx.section_id && ` • ${ctx.section_id}`}
+                      {ctx.section_id && ` ï¿½ ${ctx.section_id}`}
                     </span>
                   </div>
                   <p className="text-sm text-slate-300 font-mono">{ctx.text}</p>
@@ -136,7 +137,7 @@ export default function FieldAnnotation({
           </div>
         )}
 
-        {!currentAnnotation && !showCategorySelect && (
+        {!currentAnnotation && !showCategorySelect && !isSubmitted && (
           <div className="flex gap-2 pt-2">
             <button
               onClick={() => mark("correct")}
@@ -150,6 +151,13 @@ export default function FieldAnnotation({
             >
               <XCircle className="w-4 h-4" /> Incorrect
             </button>
+          </div>
+        )}
+
+        {!currentAnnotation && !showCategorySelect && isSubmitted && (
+          <div className="flex items-center justify-center gap-2 pt-2 text-slate-400 text-sm">
+            <Lock className="w-4 h-4" />
+            <span>No annotation recorded</span>
           </div>
         )}
 
@@ -229,20 +237,28 @@ export default function FieldAnnotation({
                 <span className="text-sm text-emerald-400 font-mono">{currentAnnotation.expected_value}</span>
               </div>
             )}
-            <button
-              onClick={() => {
-                setAnnotations(prev => {
-                  const updated = { ...prev }
-                  if (updated[record.record_id]) {
-                    delete updated[record.record_id][field]
-                  }
-                  return updated
-                })
-              }}
-              className="text-xs text-slate-400 hover:text-white transition-colors"
-            >
-              Clear annotation
-            </button>
+            {!isSubmitted && (
+              <button
+                onClick={() => {
+                  setAnnotations(prev => {
+                    const updated = { ...prev }
+                    if (updated[record.record_id]) {
+                      delete updated[record.record_id][field]
+                    }
+                    return updated
+                  })
+                }}
+                className="text-xs text-slate-400 hover:text-white transition-colors"
+              >
+                Clear annotation
+              </button>
+            )}
+            {isSubmitted && (
+              <div className="flex items-center gap-1 text-xs text-slate-500">
+                <Lock className="w-3 h-3" />
+                <span>Read-only (submitted)</span>
+              </div>
+            )}
           </div>
         )}
       </div>

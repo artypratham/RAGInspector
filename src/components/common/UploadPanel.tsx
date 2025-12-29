@@ -1,11 +1,12 @@
 import { useState, useRef } from "react"
-import { useRecoilState } from "recoil"
-import { rawInputAtom, recordsAtom } from "../../state/atom"
-import { parsePipelineData } from "../../logic/parser"
+import { useRecoilState, useSetRecoilState } from "recoil"
+import { schemaInputAtom, outputJsonAtom, recordsAtom, currentExtractionIdAtom, extractionsAtom, annotationsAtom, isAnnotationSubmittedAtom } from "../../state/atom"
+import { parseSeparateInputs } from "../../logic/parser"
 import { transformToRecords } from "../../logic/transformer"
-import { Activity, Upload, FileText, Sparkles, AlertCircle, X } from "lucide-react"
+import { api } from "../../services/api"
+import { Activity, Upload, FileText, Sparkles, AlertCircle, X, Save, CheckCircle } from "lucide-react"
 
-const SAMPLE_DATA = `{
+const SAMPLE_SCHEMA = `{
   "input_schema": {
     "borrower_name": {
       "type": "string",
@@ -16,9 +17,9 @@ const SAMPLE_DATA = `{
       "description": "Total loan amount in USD"
     }
   }
-}
+}`
 
-{
+const SAMPLE_OUTPUT = `{
   "record_id": "rec_001",
   "doc_id": "loan_application_123.pdf",
   "success": true,
@@ -49,53 +50,104 @@ const SAMPLE_DATA = `{
 }`
 
 export default function UploadPanel() {
-  const [raw, setRaw] = useRecoilState(rawInputAtom)
+  const [schemaInput, setSchemaInput] = useRecoilState(schemaInputAtom)
+  const [outputJson, setOutputJson] = useRecoilState(outputJsonAtom)
   const [, setRecords] = useRecoilState(recordsAtom)
-  const [isDragging, setIsDragging] = useState(false)
+  const setCurrentExtractionId = useSetRecoilState(currentExtractionIdAtom)
+  const setExtractions = useSetRecoilState(extractionsAtom)
+  const setAnnotations = useSetRecoilState(annotationsAtom)
+  const setIsSubmitted = useSetRecoilState(isAnnotationSubmittedAtom)
+  const [isDraggingSchema, setIsDraggingSchema] = useState(false)
+  const [isDraggingOutput, setIsDraggingOutput] = useState(false)
   const [error, setError] = useState<string | null>(null)
-  const fileInputRef = useRef<HTMLInputElement>(null)
+  const [success, setSuccess] = useState<string | null>(null)
+  const [saving, setSaving] = useState(false)
+  const schemaFileInputRef = useRef<HTMLInputElement>(null)
+  const outputFileInputRef = useRef<HTMLInputElement>(null)
 
-  function handleParse() {
+  async function handleParse() {
     try {
       setError(null)
-      const pairs = parsePipelineData(raw)
+      setSuccess(null)
+      setSaving(true)
+
+      const pairs = parseSeparateInputs(schemaInput, outputJson)
       const records = transformToRecords(pairs)
       setRecords(records)
+
+      // Reset annotations and submission status for new extraction
+      setAnnotations({})
+      setIsSubmitted(false)
+      setCurrentExtractionId(null)
+
+      setSuccess("Data loaded successfully! Start annotating fields.")
+      setTimeout(() => setSuccess(null), 3000)
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to parse data')
+    } finally {
+      setSaving(false)
     }
   }
 
   function loadSampleData() {
-    setRaw(SAMPLE_DATA)
+    setSchemaInput(SAMPLE_SCHEMA)
+    setOutputJson(SAMPLE_OUTPUT)
   }
 
-  function handleFileUpload(file: File) {
+  function handleSchemaFileUpload(file: File) {
     const reader = new FileReader()
     reader.onload = (e) => {
       const text = e.target?.result as string
-      setRaw(text)
+      setSchemaInput(text)
     }
     reader.readAsText(file)
   }
 
-  function handleDrop(e: React.DragEvent) {
+  function handleOutputFileUpload(file: File) {
+    const reader = new FileReader()
+    reader.onload = (e) => {
+      const text = e.target?.result as string
+      setOutputJson(text)
+    }
+    reader.readAsText(file)
+  }
+
+  function handleSchemaDrop(e: React.DragEvent) {
     e.preventDefault()
-    setIsDragging(false)
+    setIsDraggingSchema(false)
 
     const file = e.dataTransfer.files[0]
     if (file && (file.type === "application/json" || file.name.endsWith(".txt") || file.name.endsWith(".log"))) {
-      handleFileUpload(file)
+      handleSchemaFileUpload(file)
     }
   }
 
-  function handleDragOver(e: React.DragEvent) {
+  function handleOutputDrop(e: React.DragEvent) {
     e.preventDefault()
-    setIsDragging(true)
+    setIsDraggingOutput(false)
+
+    const file = e.dataTransfer.files[0]
+    if (file && (file.type === "application/json" || file.name.endsWith(".txt") || file.name.endsWith(".log"))) {
+      handleOutputFileUpload(file)
+    }
   }
 
-  function handleDragLeave() {
-    setIsDragging(false)
+  function handleSchemaDragOver(e: React.DragEvent) {
+    e.preventDefault()
+    setIsDraggingSchema(true)
+  }
+
+  function handleSchemaDragLeave() {
+    setIsDraggingSchema(false)
+  }
+
+  function handleOutputDragOver(e: React.DragEvent) {
+    e.preventDefault()
+    setIsDraggingOutput(true)
+  }
+
+  function handleOutputDragLeave() {
+    setIsDraggingOutput(false)
   }
 
   return (
@@ -112,67 +164,108 @@ export default function UploadPanel() {
           </p>
         </div>
 
-        <div className="grid md:grid-cols-2 gap-4">
-          <button
-            onClick={() => fileInputRef.current?.click()}
-            className="group relative overflow-hidden rounded-xl border border-slate-700/50 bg-slate-900/50 backdrop-blur-sm hover:border-cyan-500/50 transition-all duration-300 p-6"
-          >
-            <div className="absolute inset-0 bg-gradient-to-br from-cyan-500 to-blue-600 opacity-0 group-hover:opacity-10 transition-opacity" />
-            <div className="relative flex items-center gap-4">
-              <div className="p-3 rounded-xl bg-gradient-to-br from-cyan-500 to-blue-600">
-                <Upload className="w-6 h-6 text-white" />
-              </div>
-              <div className="text-left">
-                <h3 className="text-lg font-bold text-white">Upload File</h3>
-                <p className="text-sm text-slate-400">JSON, TXT, or LOG files</p>
-              </div>
-            </div>
-          </button>
-
+        <div className="flex justify-center">
           <button
             onClick={loadSampleData}
-            className="group relative overflow-hidden rounded-xl border border-slate-700/50 bg-slate-900/50 backdrop-blur-sm hover:border-purple-500/50 transition-all duration-300 p-6"
+            className="group relative overflow-hidden rounded-xl border border-slate-700/50 bg-slate-900/50 backdrop-blur-sm hover:border-purple-500/50 transition-all duration-300 px-8 py-3"
           >
             <div className="absolute inset-0 bg-gradient-to-br from-purple-500 to-pink-600 opacity-0 group-hover:opacity-10 transition-opacity" />
-            <div className="relative flex items-center gap-4">
-              <div className="p-3 rounded-xl bg-gradient-to-br from-purple-500 to-pink-600">
-                <Sparkles className="w-6 h-6 text-white" />
-              </div>
-              <div className="text-left">
-                <h3 className="text-lg font-bold text-white">Load Sample</h3>
-                <p className="text-sm text-slate-400">Try with demo data</p>
-              </div>
+            <div className="relative flex items-center gap-3">
+              <Sparkles className="w-5 h-5 text-purple-400" />
+              <span className="text-white font-semibold">Load Sample Data</span>
             </div>
           </button>
         </div>
 
         <input
-          ref={fileInputRef}
+          ref={schemaFileInputRef}
           type="file"
           accept=".json,.txt,.log"
-          onChange={(e) => e.target.files?.[0] && handleFileUpload(e.target.files[0])}
+          onChange={(e) => e.target.files?.[0] && handleSchemaFileUpload(e.target.files[0])}
+          className="hidden"
+        />
+        <input
+          ref={outputFileInputRef}
+          type="file"
+          accept=".json,.txt,.log"
+          onChange={(e) => e.target.files?.[0] && handleOutputFileUpload(e.target.files[0])}
           className="hidden"
         />
 
-        <div
-          onDrop={handleDrop}
-          onDragOver={handleDragOver}
-          onDragLeave={handleDragLeave}
-          className={`relative overflow-hidden rounded-xl border-2 border-dashed transition-all duration-300 ${
-            isDragging
-              ? "border-cyan-500 bg-cyan-500/10"
-              : "border-slate-700/50 bg-slate-900/50"
-          } backdrop-blur-sm`}
-        >
-          <div className="absolute top-4 right-4">
-            <FileText className="w-5 h-5 text-slate-500" />
+        <div className="grid md:grid-cols-2 gap-6">
+          {/* Schema Input */}
+          <div className="space-y-3">
+            <div className="flex items-center justify-between">
+              <h3 className="text-lg font-bold text-white flex items-center gap-2">
+                <div className="w-2 h-2 rounded-full bg-emerald-500" />
+                Input Schema
+              </h3>
+              <button
+                onClick={() => schemaFileInputRef.current?.click()}
+                className="flex items-center gap-2 px-3 py-1.5 rounded-lg border border-slate-700/50 bg-slate-900/50 hover:border-cyan-500/50 transition-all text-sm text-slate-400 hover:text-white"
+              >
+                <Upload className="w-4 h-4" />
+                Upload
+              </button>
+            </div>
+            <div
+              onDrop={handleSchemaDrop}
+              onDragOver={handleSchemaDragOver}
+              onDragLeave={handleSchemaDragLeave}
+              className={`relative overflow-hidden rounded-xl border-2 border-dashed transition-all duration-300 ${
+                isDraggingSchema
+                  ? "border-emerald-500 bg-emerald-500/10"
+                  : "border-slate-700/50 bg-slate-900/50"
+              } backdrop-blur-sm`}
+            >
+              <div className="absolute top-3 right-3">
+                <FileText className="w-4 h-4 text-slate-500" />
+              </div>
+              <textarea
+                className="w-full h-80 p-4 bg-transparent border-0 font-mono text-xs text-white placeholder-slate-500 focus:outline-none focus:ring-0 resize-none"
+                placeholder='Paste your input schema here...\n\nExample:\n{\n  "input_schema": {\n    "field_name": {\n      "type": "string",\n      "description": "..."\n    }\n  }\n}'
+                value={schemaInput}
+                onChange={e => setSchemaInput(e.target.value)}
+              />
+            </div>
           </div>
-          <textarea
-            className="w-full h-96 p-6 bg-transparent border-0 font-mono text-sm text-white placeholder-slate-500 focus:outline-none focus:ring-0 resize-none"
-            placeholder="Paste your schema + extraction logs here, or drag and drop a file..."
-            value={raw}
-            onChange={e => setRaw(e.target.value)}
-          />
+
+          {/* Output JSON Input */}
+          <div className="space-y-3">
+            <div className="flex items-center justify-between">
+              <h3 className="text-lg font-bold text-white flex items-center gap-2">
+                <div className="w-2 h-2 rounded-full bg-cyan-500" />
+                Output JSON
+              </h3>
+              <button
+                onClick={() => outputFileInputRef.current?.click()}
+                className="flex items-center gap-2 px-3 py-1.5 rounded-lg border border-slate-700/50 bg-slate-900/50 hover:border-cyan-500/50 transition-all text-sm text-slate-400 hover:text-white"
+              >
+                <Upload className="w-4 h-4" />
+                Upload
+              </button>
+            </div>
+            <div
+              onDrop={handleOutputDrop}
+              onDragOver={handleOutputDragOver}
+              onDragLeave={handleOutputDragLeave}
+              className={`relative overflow-hidden rounded-xl border-2 border-dashed transition-all duration-300 ${
+                isDraggingOutput
+                  ? "border-cyan-500 bg-cyan-500/10"
+                  : "border-slate-700/50 bg-slate-900/50"
+              } backdrop-blur-sm`}
+            >
+              <div className="absolute top-3 right-3">
+                <FileText className="w-4 h-4 text-slate-500" />
+              </div>
+              <textarea
+                className="w-full h-80 p-4 bg-transparent border-0 font-mono text-xs text-white placeholder-slate-500 focus:outline-none focus:ring-0 resize-none"
+                placeholder='Paste your extraction output here...\n\nExample:\n{\n  "record_id": "...",\n  "success": true,\n  "extracted_fields": {...}\n}'
+                value={outputJson}
+                onChange={e => setOutputJson(e.target.value)}
+              />
+            </div>
+          </div>
         </div>
 
         {error && (
@@ -193,12 +286,37 @@ export default function UploadPanel() {
           </div>
         )}
 
+        {success && (
+          <div className="relative rounded-xl border border-emerald-500/50 bg-emerald-500/10 backdrop-blur-sm p-4">
+            <button
+              onClick={() => setSuccess(null)}
+              className="absolute top-3 right-3 p-1 rounded-lg hover:bg-emerald-500/20 transition-colors"
+            >
+              <X className="w-4 h-4 text-emerald-400" />
+            </button>
+            <div className="flex items-start gap-3 pr-8">
+              <CheckCircle className="w-5 h-5 text-emerald-400 shrink-0 mt-0.5" />
+              <div>
+                <h3 className="text-emerald-400 font-semibold mb-1">Success!</h3>
+                <p className="text-emerald-300/90 text-sm">{success}</p>
+              </div>
+            </div>
+          </div>
+        )}
+
         <button
           onClick={handleParse}
-          disabled={!raw.trim()}
-          className="w-full px-6 py-4 rounded-xl bg-gradient-to-r from-cyan-600 to-blue-600 text-white text-lg font-semibold hover:from-cyan-500 hover:to-blue-500 disabled:from-slate-700 disabled:to-slate-700 disabled:cursor-not-allowed transition-all duration-300 shadow-lg hover:shadow-cyan-500/25"
+          disabled={!schemaInput.trim() || !outputJson.trim() || saving}
+          className="w-full px-6 py-4 rounded-xl bg-gradient-to-r from-cyan-600 to-blue-600 text-white text-lg font-semibold hover:from-cyan-500 hover:to-blue-500 disabled:from-slate-700 disabled:to-slate-700 disabled:cursor-not-allowed transition-all duration-300 shadow-lg hover:shadow-cyan-500/25 flex items-center justify-center gap-2"
         >
-          Parse & Analyze Pipeline Data
+          {saving ? (
+            <>
+              <Save className="w-5 h-5 animate-pulse" />
+              <span>Saving & Analyzing...</span>
+            </>
+          ) : (
+            <span>Parse & Analyze Pipeline Data</span>
+          )}
         </button>
 
         <div className="flex items-center gap-6 justify-center text-sm text-slate-500">
