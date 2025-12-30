@@ -1,6 +1,6 @@
 # 🔍 RAG Inspector
 
-**A Production-Ready Diagnostic Framework for Evaluating RAG + LLM Pipelines**
+**A Diagnostic Framework for Evaluating RAG + LLM Pipelines**
 
 RAG Inspector is a full-stack web application that provides field-level human annotation, persistent storage, and comprehensive reporting for evaluating Retrieval-Augmented Generation (RAG) systems. Unlike traditional metrics, it separates **faithfulness**, **retrieval relevance**, and **end-to-end correctness** to enable targeted improvements.
 
