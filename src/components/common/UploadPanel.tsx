@@ -1,11 +1,10 @@
-import { useState, useRef } from "react"
+import { useState } from "react"
 import { useRecoilState, useSetRecoilState } from "recoil"
 import {
   schemaInputAtom,
   outputJsonAtom,
   recordsAtom,
   currentExtractionIdAtom,
-  extractionsAtom,
   annotationsAtom,
   isAnnotationSubmittedAtom,
 } from "../../state/atom"
@@ -13,13 +12,7 @@ import { parseSeparateInputs } from "../../logic/parser"
 import { transformToRecords } from "../../logic/transformer"
 import {
   Activity,
-  Upload,
-  FileText,
   Sparkles,
-  AlertCircle,
-  X,
-  Save,
-  CheckCircle,
 } from "lucide-react"
 
 const SAMPLE_SCHEMA = `{
@@ -71,18 +64,12 @@ export default function UploadPanel() {
   const [, setRecords] = useRecoilState(recordsAtom)
 
   const setCurrentExtractionId = useSetRecoilState(currentExtractionIdAtom)
-  const setExtractions = useSetRecoilState(extractionsAtom)
   const setAnnotations = useSetRecoilState(annotationsAtom)
   const setIsSubmitted = useSetRecoilState(isAnnotationSubmittedAtom)
 
-  const [isDraggingSchema, setIsDraggingSchema] = useState(false)
-  const [isDraggingOutput, setIsDraggingOutput] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [success, setSuccess] = useState<string | null>(null)
   const [saving, setSaving] = useState(false)
-
-  const schemaFileInputRef = useRef<HTMLInputElement>(null)
-  const outputFileInputRef = useRef<HTMLInputElement>(null)
 
   async function handleParse() {
     try {
@@ -110,32 +97,6 @@ export default function UploadPanel() {
   function loadSampleData() {
     setSchemaInput(SAMPLE_SCHEMA)
     setOutputJson(SAMPLE_OUTPUT)
-  }
-
-  function handleSchemaFileUpload(file: File) {
-    const reader = new FileReader()
-    reader.onload = e => setSchemaInput(e.target?.result as string)
-    reader.readAsText(file)
-  }
-
-  function handleOutputFileUpload(file: File) {
-    const reader = new FileReader()
-    reader.onload = e => setOutputJson(e.target?.result as string)
-    reader.readAsText(file)
-  }
-
-  function handleSchemaDrop(e: React.DragEvent) {
-    e.preventDefault()
-    setIsDraggingSchema(false)
-    const file = e.dataTransfer.files[0]
-    if (file) handleSchemaFileUpload(file)
-  }
-
-  function handleOutputDrop(e: React.DragEvent) {
-    e.preventDefault()
-    setIsDraggingOutput(false)
-    const file = e.dataTransfer.files[0]
-    if (file) handleOutputFileUpload(file)
   }
 
   return (

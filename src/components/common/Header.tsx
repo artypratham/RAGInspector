@@ -1,20 +1,16 @@
 import { useState } from "react"
 import { useNavigate } from "react-router-dom"
-import { useRecoilValue, useSetRecoilState, useRecoilState } from "recoil"
+import { useRecoilValue, useSetRecoilState } from "recoil"
 import {
   userAtom,
   isAuthenticatedAtom,
   sidebarOpenAtom,
   recordsAtom,
-  schemaInputAtom,
-  outputJsonAtom,
-  currentExtractionIdAtom,
-  extractionsAtom,
   annotationsAtom,
 } from "../../state/atom"
 import { metricsSelector } from "../../state/selector"
 import { api } from "../../services/api"
-import { Activity, User, LogOut, Menu, Plus, Download } from "lucide-react"
+import { Activity, User, LogOut, Menu, Download } from "lucide-react"
 import { generatePDFReport } from "../../utils/pdfReport"
 
 export default function Header() {
@@ -23,15 +19,10 @@ export default function Header() {
   const setIsAuthenticated = useSetRecoilState(isAuthenticatedAtom)
   const setUser = useSetRecoilState(userAtom)
   const setSidebarOpen = useSetRecoilState(sidebarOpenAtom)
-  const [records, setRecords] = useRecoilState(recordsAtom)
-  const [schemaInput, setSchemaInput] = useRecoilState(schemaInputAtom)
-  const [outputJson, setOutputJson] = useRecoilState(outputJsonAtom)
-  const setCurrentExtractionId = useSetRecoilState(currentExtractionIdAtom)
-  const setExtractions = useSetRecoilState(extractionsAtom)
+  const records = useRecoilValue(recordsAtom)
   const annotations = useRecoilValue(annotationsAtom)
   const metrics = useRecoilValue(metricsSelector)
   const [dropdownOpen, setDropdownOpen] = useState(false)
-  const [savingNewAnalysis, setSavingNewAnalysis] = useState(false)
 
   // Calculate total fields and annotated count
   const totalFields = records.reduce((sum, r) => sum + Object.keys(r.input_schema).length, 0)
@@ -60,37 +51,6 @@ export default function Header() {
     setUser(null)
     setIsAuthenticated(false)
     navigate("/login")
-  }
-
-  async function handleNewAnalysis() {
-    // Save current analysis if it exists
-    if (schemaInput.trim() && outputJson.trim() && !savingNewAnalysis) {
-      setSavingNewAnalysis(true)
-      try {
-        const title = `Analysis ${new Date().toLocaleString()}`
-        await api.createExtraction({
-          title,
-          schemaInput,
-          outputJson,
-        })
-
-        // Refresh extractions list
-        const response = await api.getExtractions(50, 0)
-        if (response.data) {
-          setExtractions(response.data.extractions)
-        }
-      } catch (error) {
-        console.error("Error saving analysis:", error)
-      } finally {
-        setSavingNewAnalysis(false)
-      }
-    }
-
-    // Clear current state for new analysis
-    setSchemaInput("")
-    setOutputJson("")
-    setRecords([])
-    setCurrentExtractionId(null)
   }
 
   function handleExportReport() {

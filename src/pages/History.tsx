@@ -68,8 +68,8 @@ export default function History() {
         setOutputJson(ext.outputJson)
 
         // Parse and transform records
-        const { schemas, responses } = parseSeparateInputs(ext.schemaInput, ext.outputJson)
-        const records = transformToRecords(schemas, responses)
+        const pairs = parseSeparateInputs(ext.schemaInput, ext.outputJson)
+        const records = transformToRecords(pairs)
         setRecords(records)
 
         // Reconstruct annotations from backend data
