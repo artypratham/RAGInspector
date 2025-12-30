@@ -137,6 +137,7 @@ export default function UploadPanel() {
             <textarea
               className="w-full h-80 p-4 bg-transparent border-2 border-dashed border-slate-700/50 rounded-xl font-mono text-xs text-white"
               value={schemaInput}
+              placeholder="Paste your RAG input jsonschema here..."
               onChange={e => setSchemaInput(e.target.value)}
             />
           </div>
@@ -146,6 +147,7 @@ export default function UploadPanel() {
             <textarea
               className="w-full h-80 p-4 bg-transparent border-2 border-dashed border-slate-700/50 rounded-xl font-mono text-xs text-white"
               value={outputJson}
+              placeholder="Paste your RAG output JSON here..."
               onChange={e => setOutputJson(e.target.value)}
             />
           </div>
