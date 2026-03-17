@@ -1,36 +1,155 @@
+function sanitizeJsonText(text: string): string {
+  // Replace smart/curly quotes with escaped regular quotes or straight equivalents
+  // These often appear in legal documents and break JSON.parse when copy-pasted
+  let result = ""
+  let inString = false
+  let escaped = false
+
+  for (let i = 0; i < text.length; i++) {
+    const char = text[i]
+    const code = text.charCodeAt(i)
+
+    if (escaped) {
+      result += char
+      escaped = false
+      continue
+    }
+
+    if (char === "\\") {
+      result += char
+      escaped = true
+      continue
+    }
+
+    if (char === '"' && !escaped) {
+      inString = !inString
+      result += char
+      continue
+    }
+
+    if (inString) {
+      // Replace smart double quotes with escaped regular quotes
+      if (code === 0x201c || code === 0x201d) {
+        result += '\\"'
+        continue
+      }
+      // Replace smart single quotes with regular single quotes
+      if (code === 0x2018 || code === 0x2019) {
+        result += "'"
+        continue
+      }
+    }
+
+    result += char
+  }
+
+  return result
+}
+
+function removeTrailingCommas(text: string): string {
+  // Only remove trailing commas outside of string values
+  let result = ""
+  let inString = false
+  let escaped = false
+
+  for (let i = 0; i < text.length; i++) {
+    const char = text[i]
+
+    if (escaped) {
+      result += char
+      escaped = false
+      continue
+    }
+
+    if (char === "\\") {
+      result += char
+      escaped = true
+      continue
+    }
+
+    if (char === '"') {
+      inString = !inString
+      result += char
+      continue
+    }
+
+    if (!inString && char === ",") {
+      // Look ahead to see if next non-whitespace is } or ]
+      let j = i + 1
+      while (j < text.length && /\s/.test(text[j])) j++
+      if (j < text.length && (text[j] === "}" || text[j] === "]")) {
+        // Skip the trailing comma
+        continue
+      }
+    }
+
+    result += char
+  }
+
+  return result
+}
+
 function parseJsonBlocks(text: string): any[] {
   const jsonBlocks: any[] = []
   let braceCount = 0
   let current = ""
   let inBlock = false
+  let inString = false
+  let escaped = false
   const errors: string[] = []
 
-  // Clean up common JSON issues
-  text = text.replace(/,(\s*[}\]])/g, '$1') // Remove trailing commas
+  // Sanitize smart quotes and remove trailing commas safely
+  text = sanitizeJsonText(text)
+  text = removeTrailingCommas(text)
 
   for (let i = 0; i < text.length; i++) {
     const char = text[i]
 
-    if (char === "{") {
-      if (braceCount === 0) inBlock = true
-      braceCount++
+    // Track string boundaries to ignore braces inside strings
+    if (inBlock) {
+      if (escaped) {
+        escaped = false
+        current += char
+        continue
+      }
+      if (char === "\\") {
+        escaped = true
+        current += char
+        continue
+      }
+      if (char === '"') {
+        inString = !inString
+        current += char
+        continue
+      }
+    }
+
+    if (!inString) {
+      if (char === "{") {
+        if (braceCount === 0) inBlock = true
+        braceCount++
+      }
+
+      if (char === "}") {
+        if (inBlock) current += char
+        braceCount--
+        if (braceCount === 0 && inBlock) {
+          try {
+            const parsed = JSON.parse(current)
+            jsonBlocks.push(parsed)
+          } catch (e) {
+            errors.push(`Failed to parse JSON block: ${e instanceof Error ? e.message : 'Unknown error'}`)
+          }
+          current = ""
+          inBlock = false
+          inString = false
+          escaped = false
+        }
+        continue
+      }
     }
 
     if (inBlock) current += char
-
-    if (char === "}") {
-      braceCount--
-      if (braceCount === 0 && inBlock) {
-        try {
-          const parsed = JSON.parse(current)
-          jsonBlocks.push(parsed)
-        } catch (e) {
-          errors.push(`Failed to parse JSON block: ${e instanceof Error ? e.message : 'Unknown error'}`)
-        }
-        current = ""
-        inBlock = false
-      }
-    }
   }
 
   if (jsonBlocks.length === 0) {
