@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react"
+import { useMemo, useState, useRef } from "react"
 import { useRecoilValue, useRecoilState, useSetRecoilState } from "recoil"
 import { recordsAtom, sidebarOpenAtom, annotationsAtom, schemaInputAtom, outputJsonAtom, isAnnotationSubmittedAtom, extractionsAtom } from "../state/atom"
 import { metricsSelector } from "../state/selector"
@@ -26,6 +26,7 @@ export default function Dashboard() {
   const setExtractions = useSetRecoilState(extractionsAtom)
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [submitSuccess, setSubmitSuccess] = useState(false)
+  const submittingRef = useRef(false)
 
   const totalFields = useMemo(() => {
     return records.reduce((sum, r) => sum + Object.keys(r.input_schema).length, 0)
@@ -42,8 +43,8 @@ export default function Dashboard() {
   }, [records, annotations])
 
   const handleSubmitAnnotations = async () => {
-    if (isAnnotationSubmitted) return
-
+    if (isAnnotationSubmitted || submittingRef.current) return
+    submittingRef.current = true
     setIsSubmitting(true)
     try {
       // Convert annotations to API format
@@ -85,18 +86,15 @@ export default function Dashboard() {
         }
       }
     } catch (error) {
-      console.error('Failed to submit annotations:', error)
+      // Submission failed — allow retry
     } finally {
       setIsSubmitting(false)
+      submittingRef.current = false
     }
   }
 
   const handleDownloadPDFReport = () => {
-    try {
-      generatePDFReport(records, metrics, annotations, totalFields, annotatedCount)
-    } catch (error) {
-      console.error('Failed to generate PDF report:', error)
-    }
+    generatePDFReport(records, metrics, annotations, totalFields, annotatedCount)
   }
 
   const handleDownloadJSONReport = () => {

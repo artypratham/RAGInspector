@@ -11,14 +11,6 @@ export function generatePDFReport(
   totalFields: number,
   annotatedCount: number
 ) {
-  console.log('PDF Report - Starting generation with:', {
-    recordsCount: records.length,
-    baseMetrics,
-    annotationsCount: Object.keys(annotations).length,
-    totalFields,
-    annotatedCount
-  });
-
   // Compute additional metrics from records
   const totalRecords = records.length;
   const successfulRecords = records.filter(r => r.success).length;
@@ -31,8 +23,8 @@ export function generatePDFReport(
   let missingContextCount = 0;
 
   records.forEach(record => {
-    Object.keys(record.input_schema).forEach(field => {
-      const extractedField = record.extracted_fields?.[field];
+    Object.keys(record.extracted_fields).forEach(field => {
+      const extractedField = record.extracted_fields[field];
       if (extractedField) {
         const confidence = extractedField.confidence || 0;
         totalConfidence += confidence;
@@ -148,30 +140,6 @@ export function generatePDFReport(
     ],
   ];
 
-  // (doc as any).autoTable({
-  //   startY: yPosition,
-  //   head: [metricsData[0]],
-  //   body: metricsData.slice(1),
-  //   theme: 'grid',
-  //   headStyles: {
-  //     fillColor: [6, 182, 212],
-  //     textColor: [255, 255, 255],
-  //     fontStyle: 'bold',
-  //     fontSize: 9,
-  //   },
-  //   styles: {
-  //     fontSize: 8,
-  //     cellPadding: 3,
-  //   },
-  //   columnStyles: {
-  //     0: { fontStyle: 'bold', cellWidth: 35 },
-  //     1: { halign: 'center', cellWidth: 25 },
-  //     2: { fontSize: 7, cellWidth: 55 },
-  //     3: { fontSize: 7, cellWidth: 'auto' },
-  //   },
-  // });
-
-  
   autoTable(doc, {
     startY: yPosition,
     head: [metricsData[0]],
@@ -431,7 +399,5 @@ export function generatePDFReport(
 
   // Save the PDF
   const fileName = `rag_diagnostic_report_${new Date().toISOString().split('T')[0]}.pdf`;
-  console.log('PDF Report - About to save file:', fileName);
   doc.save(fileName);
-  console.log('PDF Report - File saved successfully');
 }

@@ -17,6 +17,10 @@ class ApiClient {
     return localStorage.getItem('token');
   }
 
+  private sanitizeId(id: string): string {
+    return encodeURIComponent(id);
+  }
+
   private async request<T>(
     endpoint: string,
     options: RequestInit = {}
@@ -38,15 +42,43 @@ class ApiClient {
         headers,
       });
 
+      // Handle 401 — token expired or invalid
+      if (response.status === 401) {
+        localStorage.removeItem('token');
+        localStorage.removeItem('user');
+        window.location.href = '/login';
+        return { error: 'Session expired. Please log in again.' };
+      }
+
+      // Handle empty responses (204 No Content)
+      if (response.status === 204 || response.headers.get('content-length') === '0') {
+        if (response.ok) {
+          return { data: {} as T };
+        }
+        return { error: `Request failed (${response.status})` };
+      }
+
+      // Handle non-JSON responses (502s, HTML error pages, etc.)
+      const contentType = response.headers.get('content-type');
+      if (!contentType || !contentType.includes('application/json')) {
+        if (!response.ok) {
+          return { error: `Server error (${response.status}). Please try again.` };
+        }
+        return { error: 'Unexpected response format from server.' };
+      }
+
       const data = await response.json();
 
       if (!response.ok) {
-        return { error: data.error || 'Request failed', errors: data.errors };
+        return { error: data.error || `Request failed (${response.status})`, errors: data.errors };
       }
 
       return { data };
     } catch (error) {
-      return { error: 'Network error. Please check your connection.' };
+      if (error instanceof TypeError) {
+        return { error: 'Network error. Please check your connection.' };
+      }
+      return { error: `Request failed: ${error instanceof Error ? error.message : 'Unknown error'}` };
     }
   }
 
@@ -107,7 +139,7 @@ class ApiClient {
   }
 
   async getExtraction(id: string) {
-    return this.request<{ extraction: any }>(`/extractions/${id}`);
+    return this.request<{ extraction: any }>(`/extractions/${this.sanitizeId(id)}`);
   }
 
   async updateExtraction(id: string, data: {
@@ -115,14 +147,14 @@ class ApiClient {
     schemaInput?: string;
     outputJson?: string;
   }) {
-    return this.request<{ extraction: any }>(`/extractions/${id}`, {
+    return this.request<{ extraction: any }>(`/extractions/${this.sanitizeId(id)}`, {
       method: 'PUT',
       body: JSON.stringify(data),
     });
   }
 
   async deleteExtraction(id: string) {
-    return this.request<{ message: string }>(`/extractions/${id}`, {
+    return this.request<{ message: string }>(`/extractions/${this.sanitizeId(id)}`, {
       method: 'DELETE',
     });
   }
@@ -164,7 +196,7 @@ class ApiClient {
   }
 
   async getAnnotations(extractionId: string) {
-    return this.request<{ annotations: any[] }>(`/annotations?extractionId=${extractionId}`);
+    return this.request<{ annotations: any[] }>(`/annotations?extractionId=${this.sanitizeId(extractionId)}`);
   }
 
   async updateAnnotation(id: string, data: {
@@ -173,14 +205,14 @@ class ApiClient {
     comment?: string;
     flagType?: string;
   }) {
-    return this.request<{ annotation: any }>(`/annotations/${id}`, {
+    return this.request<{ annotation: any }>(`/annotations/${this.sanitizeId(id)}`, {
       method: 'PUT',
       body: JSON.stringify(data),
     });
   }
 
   async deleteAnnotation(id: string) {
-    return this.request<{ message: string }>(`/annotations/${id}`, {
+    return this.request<{ message: string }>(`/annotations/${this.sanitizeId(id)}`, {
       method: 'DELETE',
     });
   }

@@ -20,12 +20,13 @@ export function computeMetrics(
     const fields = Object.keys(record.input_schema)
     totalFields += fields.length
 
+    // Build O(1) lookup set instead of scanning array per field
+    const contextFields = new Set(record.retrieved_context.map(c => c.field_name))
+
     fields.forEach(field => {
       const ann = annotations[record.record_id]?.[field]
       const extracted = record.extracted_fields[field]
-      const hasContext = record.retrieved_context.some(
-        c => c.field_name === field
-      )
+      const hasContext = contextFields.has(field)
 
       if (hasContext) withContext++
 

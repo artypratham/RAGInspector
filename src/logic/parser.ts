@@ -1,6 +1,7 @@
 function sanitizeJsonText(text: string): string {
-  // Replace smart/curly quotes with escaped regular quotes or straight equivalents
-  // These often appear in legal documents and break JSON.parse when copy-pasted
+  // Handle smart/curly quotes that break JSON parsing.
+  // Smart quotes OUTSIDE strings (used as delimiters) → replace with regular quotes.
+  // Smart quotes INSIDE strings → leave as-is (they're valid Unicode content).
   let result = ""
   let inString = false
   let escaped = false
@@ -21,25 +22,20 @@ function sanitizeJsonText(text: string): string {
       continue
     }
 
-    if (char === '"' && !escaped) {
+    if (char === '"') {
       inString = !inString
       result += char
       continue
     }
 
-    if (inString) {
-      // Replace smart double quotes with escaped regular quotes
-      if (code === 0x201c || code === 0x201d) {
-        result += '\\"'
-        continue
-      }
-      // Replace smart single quotes with regular single quotes
-      if (code === 0x2018 || code === 0x2019) {
-        result += "'"
-        continue
-      }
+    // Smart double quotes used as JSON string delimiters (outside strings)
+    if (!inString && (code === 0x201c || code === 0x201d)) {
+      inString = !inString
+      result += '"'
+      continue
     }
 
+    // Smart quotes inside strings are valid Unicode — keep them as-is
     result += char
   }
 

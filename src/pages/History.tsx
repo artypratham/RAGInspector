@@ -1,11 +1,11 @@
 import { useEffect, useState } from "react"
 import { useNavigate } from "react-router-dom"
-import { useSetRecoilState } from "recoil"
+import { useSetRecoilState, useRecoilValue } from "recoil"
 import Header from "../components/common/Header"
 import Sidebar from "../components/common/Sidebar"
 import { api } from "../services/api"
 import { Clock, FileText, ChevronRight, Download } from "lucide-react"
-import { recordsAtom, annotationsAtom, schemaInputAtom, outputJsonAtom, isAnnotationSubmittedAtom } from "../state/atom"
+import { recordsAtom, annotationsAtom, schemaInputAtom, outputJsonAtom, isAnnotationSubmittedAtom, sidebarOpenAtom } from "../state/atom"
 import { parseSeparateInputs } from "../logic/parser"
 import { transformToRecords } from "../logic/transformer"
 import type { AnnotationState } from "../types/annotation"
@@ -36,6 +36,7 @@ export default function History() {
   const setSchemaInput = useSetRecoilState(schemaInputAtom)
   const setOutputJson = useSetRecoilState(outputJsonAtom)
   const setIsSubmitted = useSetRecoilState(isAnnotationSubmittedAtom)
+  const sidebarOpen = useRecoilValue(sidebarOpenAtom)
 
   useEffect(() => {
     loadExtractions()
@@ -51,7 +52,7 @@ export default function History() {
         setExtractions(submitted)
       }
     } catch (error) {
-      console.error('Failed to load extractions:', error)
+      // Failed to load — handled by empty state UI
     } finally {
       setLoading(false)
     }
@@ -93,7 +94,7 @@ export default function History() {
         navigate('/')
       }
     } catch (error) {
-      console.error('Failed to load extraction:', error)
+      // Failed to load — silent
     }
   }
 
@@ -130,7 +131,7 @@ export default function History() {
         URL.revokeObjectURL(url)
       }
     } catch (error) {
-      console.error('Failed to download report:', error)
+      // Failed to download — silent
     }
   }
 
@@ -145,7 +146,7 @@ export default function History() {
       <Header />
       <Sidebar />
 
-      <main className="transition-all duration-300 pt-20 pl-80">
+      <main className={`transition-all duration-300 pt-20 ${sidebarOpen ? 'pl-80' : 'pl-0'}`}>
         <div className="p-8">
           <div className="mb-8">
             <h1 className="text-3xl font-bold text-white mb-2">Annotation History</h1>

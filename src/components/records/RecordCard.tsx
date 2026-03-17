@@ -20,9 +20,11 @@ export default function RecordCard({
     const incorrect = fields.filter(f => recordAnnotations[f]?.status === "incorrect").length
     const pending = fields.length - correct - incorrect
 
-    const avgConfidence = fields.reduce((sum, field) =>
-      sum + (record.extracted_fields[field]?.confidence || 0), 0
-    ) / fields.length
+    const avgConfidence = fields.length > 0
+      ? fields.reduce((sum, field) =>
+          sum + (record.extracted_fields[field]?.confidence || 0), 0
+        ) / fields.length
+      : 0
 
     return { total: fields.length, correct, incorrect, pending, avgConfidence }
   }, [record, annotations])
@@ -107,18 +109,18 @@ export default function RecordCard({
             <div className="flex items-center justify-between mb-2">
               <h4 className="text-sm font-semibold text-slate-300">Annotation Progress</h4>
               <span className="text-sm font-semibold text-white">
-                {((fieldStats.correct + fieldStats.incorrect) / fieldStats.total * 100).toFixed(0)}%
+                {(fieldStats.total > 0 ? (fieldStats.correct + fieldStats.incorrect) / fieldStats.total * 100 : 0).toFixed(0)}%
               </span>
             </div>
             <div className="w-full bg-slate-700 rounded-full h-2 overflow-hidden">
               <div className="h-full flex">
                 <div
                   className="bg-gradient-to-r from-emerald-500 to-teal-600"
-                  style={{ width: `${(fieldStats.correct / fieldStats.total) * 100}%` }}
+                  style={{ width: `${fieldStats.total > 0 ? (fieldStats.correct / fieldStats.total) * 100 : 0}%` }}
                 />
                 <div
                   className="bg-gradient-to-r from-red-500 to-rose-600"
-                  style={{ width: `${(fieldStats.incorrect / fieldStats.total) * 100}%` }}
+                  style={{ width: `${fieldStats.total > 0 ? (fieldStats.incorrect / fieldStats.total) * 100 : 0}%` }}
                 />
               </div>
             </div>

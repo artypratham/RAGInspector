@@ -26,15 +26,30 @@ export const outputJsonAtom = atom<string>({
   default: ""
 })
 
-// Auth atoms
+// Auth atoms — safe initialization with try-catch to prevent app crash on corrupted localStorage
 export const userAtom = atom<any>({
   key: "userAtom",
-  default: localStorage.getItem('user') ? JSON.parse(localStorage.getItem('user')!) : null
+  default: (() => {
+    try {
+      const stored = localStorage.getItem('user')
+      return stored ? JSON.parse(stored) : null
+    } catch {
+      localStorage.removeItem('user')
+      localStorage.removeItem('token')
+      return null
+    }
+  })()
 })
 
 export const isAuthenticatedAtom = atom<boolean>({
   key: "isAuthenticatedAtom",
   default: !!localStorage.getItem('token')
+})
+
+// Flag to track if auth has been verified against the server
+export const authVerifiedAtom = atom<boolean>({
+  key: "authVerifiedAtom",
+  default: false
 })
 
 // UI atoms

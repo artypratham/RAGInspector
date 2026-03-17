@@ -34,11 +34,19 @@ export function transformToRecords(pairs: any[]): RecordData[] {
       }
     })
 
+    // Ensure input_schema covers all fields (not just schema-provided ones)
+    const mergedSchema: Record<string, any> = { ...schemaProps }
+    allFields.forEach(field => {
+      if (!mergedSchema[field]) {
+        mergedSchema[field] = { type: "string", description: field }
+      }
+    })
+
     return {
       record_id: pair.response.doc_id || `rec_${idx}`,
       doc_id: pair.response.doc_id,
       success: pair.response.success,
-      input_schema: schemaProps,
+      input_schema: mergedSchema,
       extracted_fields,
       retrieved_context,
       metadata: pair.response.metadata

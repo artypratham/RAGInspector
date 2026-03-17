@@ -31,13 +31,16 @@ export default function Sidebar() {
   }, [])
 
   async function loadExtractions() {
-    const response = await api.getExtractions(50, 0)
-    if (response.data) {
-      // Filter to show only submitted extractions
-      const submittedExtractions = response.data.extractions.filter(
-        (ext: any) => ext.submittedAt !== null && ext.submittedAt !== undefined
-      )
-      setExtractions(submittedExtractions)
+    try {
+      const response = await api.getExtractions(50, 0)
+      if (response.data) {
+        const submittedExtractions = response.data.extractions.filter(
+          (ext: any) => ext.submittedAt !== null && ext.submittedAt !== undefined
+        )
+        setExtractions(submittedExtractions)
+      }
+    } catch (error) {
+      // Fail silently — sidebar is non-critical
     }
   }
 
@@ -75,8 +78,8 @@ export default function Sidebar() {
 
         // Mark as submitted (read-only)
         setIsSubmitted(true)
-      } catch (error) {
-        console.error("Error parsing extraction:", error)
+      } catch {
+        // Parse failed — data may be corrupted
       }
     }
   }

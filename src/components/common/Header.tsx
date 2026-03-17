@@ -1,4 +1,4 @@
-import { useState } from "react"
+import { useState, useMemo } from "react"
 import { useNavigate } from "react-router-dom"
 import { useRecoilValue, useSetRecoilState } from "recoil"
 import {
@@ -24,11 +24,16 @@ export default function Header() {
   const metrics = useRecoilValue(metricsSelector)
   const [dropdownOpen, setDropdownOpen] = useState(false)
 
-  // Calculate total fields and annotated count
-  const totalFields = records.reduce((sum, r) => sum + Object.keys(r.input_schema).length, 0)
-  const annotatedCount = Object.values(annotations).reduce((sum, recordAnnotations) => {
-    return sum + Object.values(recordAnnotations).filter(a => a.status).length
-  }, 0)
+  const totalFields = useMemo(() =>
+    records.reduce((sum, r) => sum + Object.keys(r.input_schema).length, 0),
+    [records]
+  )
+
+  const annotatedCount = useMemo(() =>
+    Object.values(annotations).reduce((sum, recordAnnotations) =>
+      sum + Object.values(recordAnnotations).filter(a => a.status).length, 0),
+    [annotations]
+  )
 
   const hasAnalysis = records.length > 0
   const isFullyAnnotated = hasAnalysis && annotatedCount === totalFields && totalFields > 0
@@ -36,15 +41,6 @@ export default function Header() {
   const submitIncorrectAnnotation = Object.values(annotations).some(recordAnnotations =>
     Object.values(recordAnnotations).some(annotation => !annotation.status)
   )
-
-  // Debug logging
-  console.log('Export Report Debug:', {
-    totalFields,
-    annotatedCount,
-    hasAnalysis,
-    isFullyAnnotated,
-    annotations
-  })
 
   function handleLogout() {
     api.logout()
@@ -54,14 +50,7 @@ export default function Header() {
   }
 
   function handleExportReport() {
-    try {
-      console.log('Starting PDF export...', { records, metrics, annotations, totalFields, annotatedCount })
-      generatePDFReport(records, metrics, annotations, totalFields, annotatedCount)
-      console.log('PDF export completed successfully')
-    } catch (error) {
-      console.error('Error generating PDF report:', error)
-      alert('Failed to generate PDF report. Please check the console for details.')
-    }
+    generatePDFReport(records, metrics, annotations, totalFields, annotatedCount)
   }
 
   return (
@@ -82,22 +71,8 @@ export default function Header() {
         </div>
 
         <div className="flex items-center gap-3">
-          {/* New Analysis Button */}
-          {/* {hasAnalysis && (
-            <button
-              onClick={handleNewAnalysis}
-              disabled={savingNewAnalysis}
-              className="flex items-center gap-2 px-4 py-2 rounded-lg bg-slate-700 hover:bg-slate-600 text-white text-sm font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              <Plus className="w-4 h-4" />
-              <span className="hidden sm:inline">
-                {savingNewAnalysis ? "Saving..." : "New Analysis"}
-              </span>
-            </button>
-          )} */}
-
           {/* Export Report Button */}
-          {isFullyAnnotated && submitIncorrectAnnotation &&  (
+          {isFullyAnnotated && submitIncorrectAnnotation && (
             <button
               onClick={handleExportReport}
               className="flex items-center gap-2 px-4 py-2 rounded-lg bg-gradient-to-r from-emerald-600 to-green-600 hover:from-emerald-500 hover:to-green-500 text-white text-sm font-medium transition-all shadow-lg hover:shadow-emerald-500/25"
@@ -106,10 +81,6 @@ export default function Header() {
               <span className="hidden sm:inline">Export Report</span>
             </button>
           )}
-
-
-
-
 
           {/* User Menu */}
           <div className="relative">
