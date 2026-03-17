@@ -72,8 +72,13 @@ export function parsePipelineData(text: string): any[] {
 }
 
 export function parseSeparateInputs(schemaText: string, outputText: string): any[] {
-  // Parse schema
-  const schemaBlocks = parseJsonBlocks(schemaText)
+  // Parse schema (tolerant of empty/missing schema)
+  let schemaBlocks: any[] = []
+  try {
+    schemaBlocks = parseJsonBlocks(schemaText)
+  } catch {
+    // Schema parsing failed — will auto-generate from extraction keys below
+  }
   const schemas: any[] = []
 
   schemaBlocks.forEach(b => {
@@ -87,10 +92,6 @@ export function parseSeparateInputs(schemaText: string, outputText: string): any
       schemas.push({ schema: { properties: b } })
     }
   })
-
-  if (schemas.length === 0) {
-    throw new Error('No schema found. Expected a JSON object with "schema" or "input_schema" field, or a plain object with field definitions.')
-  }
 
   // Parse output/responses
   const outputBlocks = parseJsonBlocks(outputText)
@@ -107,6 +108,18 @@ export function parseSeparateInputs(schemaText: string, outputText: string): any
 
   if (responses.length === 0) {
     throw new Error('No extraction responses found. Expected JSON objects with extraction results.')
+  }
+
+  // If no schema was found, auto-generate one from extraction keys
+  if (schemas.length === 0) {
+    responses.forEach(r => {
+      const extraction = r.extraction || r.extracted_fields || {}
+      const properties: Record<string, any> = {}
+      Object.keys(extraction).forEach(key => {
+        properties[key] = { type: "string", description: key }
+      })
+      schemas.push({ schema: { properties } })
+    })
   }
 
   return responses.map((r, i) => ({

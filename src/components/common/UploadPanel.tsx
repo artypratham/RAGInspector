@@ -158,7 +158,7 @@ export default function UploadPanel() {
 
         <button
           onClick={handleParse}
-          disabled={!schemaInput.trim() || !outputJson.trim() || saving}
+          disabled={!outputJson.trim() || saving}
           className="w-full px-6 py-4 rounded-xl bg-gradient-to-r from-cyan-600 to-blue-600 text-white text-lg font-semibold"
         >
           {saving ? "Saving & Analyzing..." : "Parse & Analyze Pipeline Data"}

@@ -2,14 +2,17 @@ import type { RecordData } from "../types/pipeline"
 
 export function transformToRecords(pairs: any[]): RecordData[] {
   return pairs.map((pair, idx) => {
-    const schemaProps = pair.schema.properties
+    const schemaProps = pair.schema?.properties || {}
     const extracted = pair.response.extraction || {}
     const provenance = pair.response.provenance || {}
 
     const extracted_fields: any = {}
     const retrieved_context: any[] = []
 
-    Object.keys(schemaProps).forEach(field => {
+    // Use extraction keys as the source of truth, falling back to schema keys
+    const allFields = new Set([...Object.keys(extracted), ...Object.keys(schemaProps)])
+
+    allFields.forEach(field => {
       extracted_fields[field] = {
         value: extracted[field] ?? null,
         confidence: provenance[field]?.confidence ?? 0,
