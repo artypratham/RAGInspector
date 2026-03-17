@@ -9,26 +9,10 @@ import { recordsAtom, annotationsAtom, schemaInputAtom, outputJsonAtom, isAnnota
 import { parseSeparateInputs } from "../logic/parser"
 import { transformToRecords } from "../logic/transformer"
 import type { AnnotationState } from "../types/annotation"
-
-interface Extraction {
-  id: string
-  title: string
-  createdAt: string
-  submittedAt: string
-  annotations: Array<{
-    id: string
-    recordId: string
-    fieldName: string
-    status: string
-    extractedValue?: string
-    expectedValue?: string
-    category?: string
-    confidence?: number
-  }>
-}
+import type { ExtractionListItem, BackendAnnotation } from "../types/api"
 
 export default function History() {
-  const [extractions, setExtractions] = useState<Extraction[]>([])
+  const [extractions, setExtractions] = useState<ExtractionListItem[]>([])
   const [loading, setLoading] = useState(true)
   const navigate = useNavigate()
   const setRecords = useSetRecoilState(recordsAtom)
@@ -47,40 +31,36 @@ export default function History() {
     try {
       const response = await api.getExtractions(50, 0)
       if (response.data) {
-        // Filter only submitted extractions
-        const submitted = response.data.extractions.filter((e: any) => e.submittedAt)
+        const submitted = response.data.extractions.filter((e) => e.submittedAt)
         setExtractions(submitted)
       }
-    } catch (error) {
+    } catch {
       // Failed to load — handled by empty state UI
     } finally {
       setLoading(false)
     }
   }
 
-  const viewExtraction = async (extraction: Extraction) => {
+  const viewExtraction = async (extraction: ExtractionListItem) => {
     try {
       const response = await api.getExtraction(extraction.id)
       if (response.data) {
         const ext = response.data.extraction
 
-        // Set schema and output
         setSchemaInput(ext.schemaInput)
         setOutputJson(ext.outputJson)
 
-        // Parse and transform records
         const pairs = parseSeparateInputs(ext.schemaInput, ext.outputJson)
         const records = transformToRecords(pairs)
         setRecords(records)
 
-        // Reconstruct annotations from backend data
         const annotationsState: AnnotationState = {}
-        ext.annotations.forEach((ann: any) => {
+        ext.annotations.forEach((ann: BackendAnnotation) => {
           if (!annotationsState[ann.recordId]) {
             annotationsState[ann.recordId] = {}
           }
           annotationsState[ann.recordId][ann.fieldName] = {
-            status: ann.status,
+            status: ann.status as "correct" | "incorrect",
             extracted_value: ann.extractedValue,
             expected_value: ann.expectedValue,
             category: ann.category,
@@ -90,25 +70,23 @@ export default function History() {
         setAnnotations(annotationsState)
         setIsSubmitted(true)
 
-        // Navigate to dashboard
         navigate('/')
       }
-    } catch (error) {
+    } catch {
       // Failed to load — silent
     }
   }
 
-  const downloadReport = async (extraction: Extraction) => {
+  const downloadReport = async (extraction: ExtractionListItem) => {
     try {
       const response = await api.getExtraction(extraction.id)
       if (response.data) {
         const ext = response.data.extraction
 
-        // Create report data
         const report = {
           title: ext.title,
-          submittedAt: new Date(ext.submittedAt).toLocaleString(),
-          annotations: ext.annotations.map((ann: any) => ({
+          submittedAt: new Date(ext.submittedAt!).toLocaleString(),
+          annotations: ext.annotations.map((ann: BackendAnnotation) => ({
             recordId: ann.recordId,
             fieldName: ann.fieldName,
             status: ann.status,
@@ -119,7 +97,6 @@ export default function History() {
           }))
         }
 
-        // Download as JSON
         const blob = new Blob([JSON.stringify(report, null, 2)], { type: 'application/json' })
         const url = URL.createObjectURL(blob)
         const a = document.createElement('a')
@@ -130,12 +107,12 @@ export default function History() {
         document.body.removeChild(a)
         URL.revokeObjectURL(url)
       }
-    } catch (error) {
+    } catch {
       // Failed to download — silent
     }
   }
 
-  const getAnnotationStats = (annotations: Extraction['annotations']) => {
+  const getAnnotationStats = (annotations: BackendAnnotation[]) => {
     const correct = annotations.filter(a => a.status === 'correct').length
     const incorrect = annotations.filter(a => a.status === 'incorrect').length
     return { correct, incorrect, total: annotations.length }
@@ -178,7 +155,7 @@ export default function History() {
                         <div className="flex items-center gap-4 text-sm text-slate-400">
                           <div className="flex items-center gap-1">
                             <Clock className="w-4 h-4" />
-                            <span>Submitted {new Date(extraction.submittedAt).toLocaleString()}</span>
+                            <span>Submitted {new Date(extraction.submittedAt!).toLocaleString()}</span>
                           </div>
                           <div className="flex items-center gap-3">
                             <span className="text-emerald-400">{stats.correct} correct</span>

@@ -1,13 +1,14 @@
 import type { RecordData } from "../types/pipeline"
 
-export function transformToRecords(pairs: any[]): RecordData[] {
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export function transformToRecords(pairs: Array<{ schema: Record<string, any>; response: Record<string, any> }>): RecordData[] {
   return pairs.map((pair, idx) => {
     const schemaProps = pair.schema?.properties || {}
     const extracted = pair.response.extraction || {}
     const provenance = pair.response.provenance || {}
 
-    const extracted_fields: any = {}
-    const retrieved_context: any[] = []
+    const extracted_fields: Record<string, { value: string | null; confidence: number; requires_review: boolean }> = {}
+    const retrieved_context: RecordData["retrieved_context"] = []
 
     // Use extraction keys as the source of truth, falling back to schema keys
     const allFields = new Set([...Object.keys(extracted), ...Object.keys(schemaProps)])
@@ -35,6 +36,7 @@ export function transformToRecords(pairs: any[]): RecordData[] {
     })
 
     // Ensure input_schema covers all fields (not just schema-provided ones)
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const mergedSchema: Record<string, any> = { ...schemaProps }
     allFields.forEach(field => {
       if (!mergedSchema[field]) {

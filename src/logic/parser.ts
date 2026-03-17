@@ -1,7 +1,4 @@
 function sanitizeJsonText(text: string): string {
-  // Handle smart/curly quotes that break JSON parsing.
-  // Smart quotes OUTSIDE strings (used as delimiters) → replace with regular quotes.
-  // Smart quotes INSIDE strings → leave as-is (they're valid Unicode content).
   let result = ""
   let inString = false
   let escaped = false
@@ -43,7 +40,6 @@ function sanitizeJsonText(text: string): string {
 }
 
 function removeTrailingCommas(text: string): string {
-  // Only remove trailing commas outside of string values
   let result = ""
   let inString = false
   let escaped = false
@@ -70,11 +66,9 @@ function removeTrailingCommas(text: string): string {
     }
 
     if (!inString && char === ",") {
-      // Look ahead to see if next non-whitespace is } or ]
       let j = i + 1
       while (j < text.length && /\s/.test(text[j])) j++
       if (j < text.length && (text[j] === "}" || text[j] === "]")) {
-        // Skip the trailing comma
         continue
       }
     }
@@ -85,8 +79,10 @@ function removeTrailingCommas(text: string): string {
   return result
 }
 
-function parseJsonBlocks(text: string): any[] {
-  const jsonBlocks: any[] = []
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function parseJsonBlocks(text: string): Record<string, any>[] {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const jsonBlocks: Record<string, any>[] = []
   let braceCount = 0
   let current = ""
   let inBlock = false
@@ -94,14 +90,12 @@ function parseJsonBlocks(text: string): any[] {
   let escaped = false
   const errors: string[] = []
 
-  // Sanitize smart quotes and remove trailing commas safely
   text = sanitizeJsonText(text)
   text = removeTrailingCommas(text)
 
   for (let i = 0; i < text.length; i++) {
     const char = text[i]
 
-    // Track string boundaries to ignore braces inside strings
     if (inBlock) {
       if (escaped) {
         escaped = false
@@ -155,14 +149,22 @@ function parseJsonBlocks(text: string): any[] {
   return jsonBlocks
 }
 
-export function parsePipelineData(text: string): any[] {
+interface SchemaPair {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  schema: Record<string, any>
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  response: Record<string, any>
+}
+
+export function parsePipelineData(text: string): SchemaPair[] {
   const jsonBlocks = parseJsonBlocks(text)
 
-  const schemas: any[] = []
-  const responses: any[] = []
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const schemas: Record<string, any>[] = []
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const responses: Record<string, any>[] = []
 
   jsonBlocks.forEach(b => {
-    // Support both "schema" and "input_schema" formats
     if (b.schema?.properties || b.schema?.type === 'object') {
       schemas.push(b)
     } else if (b.input_schema) {
@@ -186,39 +188,33 @@ export function parsePipelineData(text: string): any[] {
   }))
 }
 
-export function parseSeparateInputs(schemaText: string, outputText: string): any[] {
-  // Parse schema (tolerant of empty/missing schema)
-  let schemaBlocks: any[] = []
+export function parseSeparateInputs(schemaText: string, outputText: string): SchemaPair[] {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  let schemaBlocks: Record<string, any>[] = []
   try {
     schemaBlocks = parseJsonBlocks(schemaText)
   } catch {
     // Schema parsing failed — will auto-generate from extraction keys below
   }
-  const schemas: any[] = []
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const schemas: Record<string, any>[] = []
 
   schemaBlocks.forEach(b => {
-    // Support both "schema" and "input_schema" formats
     if (b.schema?.properties || b.schema?.type === 'object') {
       schemas.push(b)
     } else if (b.input_schema) {
       schemas.push({ schema: { properties: b.input_schema } })
     } else {
-      // If it's just a plain object with field definitions, treat it as input_schema
       schemas.push({ schema: { properties: b } })
     }
   })
 
-  // Parse output/responses
   const outputBlocks = parseJsonBlocks(outputText)
-  const responses: any[] = []
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const responses: Record<string, any>[] = []
 
   outputBlocks.forEach(b => {
-    if (b.extraction || b.success !== undefined || b.extracted_fields || b.record_id) {
-      responses.push(b)
-    } else {
-      // If it doesn't match known patterns, still include it
-      responses.push(b)
-    }
+    responses.push(b)
   })
 
   if (responses.length === 0) {
@@ -229,7 +225,7 @@ export function parseSeparateInputs(schemaText: string, outputText: string): any
   if (schemas.length === 0) {
     responses.forEach(r => {
       const extraction = r.extraction || r.extracted_fields || {}
-      const properties: Record<string, any> = {}
+      const properties: Record<string, { type: string; description: string }> = {}
       Object.keys(extraction).forEach(key => {
         properties[key] = { type: "string", description: key }
       })

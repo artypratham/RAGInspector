@@ -40,7 +40,7 @@ export default function Signup() {
         setIsAuthenticated(true)
         navigate("/")
       }
-    } catch (err) {
+    } catch {
       setError("An unexpected error occurred")
       setLoading(false)
     }

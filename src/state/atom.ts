@@ -1,6 +1,7 @@
 import { atom } from "recoil"
 import type { RecordData } from "../types/pipeline"
 import type { AnnotationState } from "../types/annotation"
+import type { User, ExtractionListItem } from "../types/api"
 
 export const recordsAtom = atom<RecordData[]>({
   key: "recordsAtom",
@@ -11,10 +12,6 @@ export const annotationsAtom = atom<AnnotationState>({
   key: "annotationsAtom",
   default: {}
 })
-
-
-
-
 
 export const schemaInputAtom = atom<string>({
   key: "schemaInputAtom",
@@ -27,12 +24,12 @@ export const outputJsonAtom = atom<string>({
 })
 
 // Auth atoms — safe initialization with try-catch to prevent app crash on corrupted localStorage
-export const userAtom = atom<any>({
+export const userAtom = atom<User | null>({
   key: "userAtom",
   default: (() => {
     try {
       const stored = localStorage.getItem('user')
-      return stored ? JSON.parse(stored) : null
+      return stored ? JSON.parse(stored) as User : null
     } catch {
       localStorage.removeItem('user')
       localStorage.removeItem('token')
@@ -63,7 +60,7 @@ export const currentExtractionIdAtom = atom<string | null>({
   default: null
 })
 
-export const extractionsAtom = atom<any[]>({
+export const extractionsAtom = atom<ExtractionListItem[]>({
   key: "extractionsAtom",
   default: []
 })

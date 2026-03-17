@@ -80,12 +80,12 @@ export default function Dashboard() {
         const extractionsResponse = await api.getExtractions(50, 0)
         if (extractionsResponse.data) {
           const submittedExtractions = extractionsResponse.data.extractions.filter(
-            (ext: any) => ext.submittedAt !== null && ext.submittedAt !== undefined
+            (ext) => ext.submittedAt !== null && ext.submittedAt !== undefined
           )
           setExtractions(submittedExtractions)
         }
       }
-    } catch (error) {
+    } catch {
       // Submission failed — allow retry
     } finally {
       setIsSubmitting(false)

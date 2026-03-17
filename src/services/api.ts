@@ -1,4 +1,7 @@
-const API_URL = import.meta.env.VITE_API_URL || 'https://raginspector-backend.onrender.com/api';
+import { getApiUrl } from '../utils/env';
+import type { User, Extraction, ExtractionListItem, Pagination, BackendAnnotation } from '../types/api';
+
+const API_URL = getApiUrl();
 
 interface ApiResponse<T> {
   data?: T;
@@ -42,7 +45,6 @@ class ApiClient {
         headers,
       });
 
-      // Handle 401 — token expired or invalid
       if (response.status === 401) {
         localStorage.removeItem('token');
         localStorage.removeItem('user');
@@ -50,7 +52,6 @@ class ApiClient {
         return { error: 'Session expired. Please log in again.' };
       }
 
-      // Handle empty responses (204 No Content)
       if (response.status === 204 || response.headers.get('content-length') === '0') {
         if (response.ok) {
           return { data: {} as T };
@@ -58,7 +59,6 @@ class ApiClient {
         return { error: `Request failed (${response.status})` };
       }
 
-      // Handle non-JSON responses (502s, HTML error pages, etc.)
       const contentType = response.headers.get('content-type');
       if (!contentType || !contentType.includes('application/json')) {
         if (!response.ok) {
@@ -84,7 +84,7 @@ class ApiClient {
 
   // Auth endpoints
   async signup(email: string, password: string, name?: string) {
-    const response = await this.request<{ user: any; token: string }>('/auth/signup', {
+    const response = await this.request<{ user: User; token: string }>('/auth/signup', {
       method: 'POST',
       body: JSON.stringify({ email, password, name }),
     });
@@ -98,7 +98,7 @@ class ApiClient {
   }
 
   async login(email: string, password: string) {
-    const response = await this.request<{ user: any; token: string }>('/auth/login', {
+    const response = await this.request<{ user: User; token: string }>('/auth/login', {
       method: 'POST',
       body: JSON.stringify({ email, password }),
     });
@@ -112,7 +112,7 @@ class ApiClient {
   }
 
   async getMe() {
-    return this.request<{ user: any }>('/auth/me');
+    return this.request<{ user: User }>('/auth/me');
   }
 
   logout() {
@@ -126,20 +126,20 @@ class ApiClient {
     schemaInput: string;
     outputJson: string;
   }) {
-    return this.request<{ extraction: any }>('/extractions', {
+    return this.request<{ extraction: Extraction }>('/extractions', {
       method: 'POST',
       body: JSON.stringify(data),
     });
   }
 
   async getExtractions(limit = 20, offset = 0) {
-    return this.request<{ extractions: any[]; pagination: any }>(
+    return this.request<{ extractions: ExtractionListItem[]; pagination: Pagination }>(
       `/extractions?limit=${limit}&offset=${offset}`
     );
   }
 
   async getExtraction(id: string) {
-    return this.request<{ extraction: any }>(`/extractions/${this.sanitizeId(id)}`);
+    return this.request<{ extraction: Extraction }>(`/extractions/${this.sanitizeId(id)}`);
   }
 
   async updateExtraction(id: string, data: {
@@ -147,7 +147,7 @@ class ApiClient {
     schemaInput?: string;
     outputJson?: string;
   }) {
-    return this.request<{ extraction: any }>(`/extractions/${this.sanitizeId(id)}`, {
+    return this.request<{ extraction: Extraction }>(`/extractions/${this.sanitizeId(id)}`, {
       method: 'PUT',
       body: JSON.stringify(data),
     });
@@ -173,7 +173,7 @@ class ApiClient {
       confidence?: number;
     }>;
   }) {
-    return this.request<{ extraction: any }>('/extractions/submit', {
+    return this.request<{ extraction: Extraction }>('/extractions/submit', {
       method: 'POST',
       body: JSON.stringify(data),
     });
@@ -189,14 +189,14 @@ class ApiClient {
     comment?: string;
     flagType?: string;
   }) {
-    return this.request<{ annotation: any }>('/annotations', {
+    return this.request<{ annotation: BackendAnnotation }>('/annotations', {
       method: 'POST',
       body: JSON.stringify(data),
     });
   }
 
   async getAnnotations(extractionId: string) {
-    return this.request<{ annotations: any[] }>(`/annotations?extractionId=${this.sanitizeId(extractionId)}`);
+    return this.request<{ annotations: BackendAnnotation[] }>(`/annotations?extractionId=${this.sanitizeId(extractionId)}`);
   }
 
   async updateAnnotation(id: string, data: {
@@ -205,7 +205,7 @@ class ApiClient {
     comment?: string;
     flagType?: string;
   }) {
-    return this.request<{ annotation: any }>(`/annotations/${this.sanitizeId(id)}`, {
+    return this.request<{ annotation: BackendAnnotation }>(`/annotations/${this.sanitizeId(id)}`, {
       method: 'PUT',
       body: JSON.stringify(data),
     });

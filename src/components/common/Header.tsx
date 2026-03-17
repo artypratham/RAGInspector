@@ -6,7 +6,7 @@ import {
   isAuthenticatedAtom,
   sidebarOpenAtom,
   recordsAtom,
-  annotationsAtom,
+  annotationsAtom
 } from "../../state/atom"
 import { metricsSelector } from "../../state/selector"
 import { api } from "../../services/api"

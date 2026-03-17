@@ -1,4 +1,4 @@
-import { useEffect } from "react"
+import { useEffect, useCallback } from "react"
 import { useRecoilState, useSetRecoilState } from "recoil"
 import {
   extractionsAtom,
@@ -15,6 +15,7 @@ import { parseSeparateInputs } from "../../logic/parser"
 import { transformToRecords } from "../../logic/transformer"
 import { Clock, FileText, Trash2, ChevronLeft, ChevronRight, CheckCircle } from "lucide-react"
 import type { AnnotationState } from "../../types/annotation"
+import type { ExtractionListItem, BackendAnnotation } from "../../types/api"
 
 export default function Sidebar() {
   const [extractions, setExtractions] = useRecoilState(extractionsAtom)
@@ -26,23 +27,23 @@ export default function Sidebar() {
   const setAnnotations = useSetRecoilState(annotationsAtom)
   const setIsSubmitted = useSetRecoilState(isAnnotationSubmittedAtom)
 
-  useEffect(() => {
-    loadExtractions()
-  }, [])
-
-  async function loadExtractions() {
+  const loadExtractions = useCallback(async () => {
     try {
       const response = await api.getExtractions(50, 0)
       if (response.data) {
         const submittedExtractions = response.data.extractions.filter(
-          (ext: any) => ext.submittedAt !== null && ext.submittedAt !== undefined
+          (ext) => ext.submittedAt !== null && ext.submittedAt !== undefined
         )
         setExtractions(submittedExtractions)
       }
-    } catch (error) {
+    } catch {
       // Fail silently — sidebar is non-critical
     }
-  }
+  }, [setExtractions])
+
+  useEffect(() => {
+    loadExtractions()
+  }, [loadExtractions])
 
   async function loadExtraction(id: string) {
     const response = await api.getExtraction(id)
@@ -60,19 +61,19 @@ export default function Sidebar() {
         // Reconstruct annotations from backend data
         const annotationsState: AnnotationState = {}
         if (extraction.annotations && extraction.annotations.length > 0) {
-          extraction.annotations.forEach((ann: any) => {
+          extraction.annotations.forEach((ann: BackendAnnotation) => {
             if (!annotationsState[ann.recordId]) {
               annotationsState[ann.recordId] = {}
             }
             annotationsState[ann.recordId][ann.fieldName] = {
-              status: ann.status,
+              status: ann.status as "correct" | "incorrect",
               extracted_value: ann.extractedValue,
               expected_value: ann.expectedValue,
               category: ann.category,
               confidence: ann.confidence
             }
           })
-          
+
         }
         setAnnotations(annotationsState)
 
@@ -117,12 +118,12 @@ export default function Sidebar() {
     return date.toLocaleDateString()
   }
 
-  function getAnnotationCount(extraction: any): { correct: number; incorrect: number; total: number } {
+  function getAnnotationCount(extraction: ExtractionListItem): { correct: number; incorrect: number; total: number } {
     if (!extraction.annotations || extraction.annotations.length === 0) {
       return { correct: 0, incorrect: 0, total: 0 }
     }
-    const correct = extraction.annotations.filter((a: any) => a.status === 'correct').length
-    const incorrect = extraction.annotations.filter((a: any) => a.status === 'incorrect').length
+    const correct = extraction.annotations.filter((a) => a.status === 'correct').length
+    const incorrect = extraction.annotations.filter((a) => a.status === 'incorrect').length
     return { correct, incorrect, total: extraction.annotations.length }
   }
 
@@ -181,8 +182,6 @@ export default function Sidebar() {
                         </div>
                         {stats.total > 0 && (
                           <div className="flex items-center gap-3 mt-2 text-xs">
-                            {/* <span className="text-emerald-400">{stats.correct} ✓</span>
-                            <span className="text-red-400">{stats.incorrect} ✗</span> */}
                             <span className="text-slate-500">{stats.total} total</span>
                           </div>
                         )}

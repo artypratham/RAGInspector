@@ -1,4 +1,9 @@
-# 🔍 RAG Inspector
+# RAG Inspector
+
+[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](https://opensource.org/licenses/MIT)
+[![TypeScript](https://img.shields.io/badge/TypeScript-5.9-blue)](https://www.typescriptlang.org/)
+[![React](https://img.shields.io/badge/React-18-61dafb)](https://react.dev/)
+[![Vite](https://img.shields.io/badge/Vite-7-646cff)](https://vite.dev/)
 
 **A Diagnostic Framework for Evaluating RAG + LLM Pipelines**
 
@@ -131,7 +136,7 @@ Field Accuracy = Correct Fields / Total Fields
 
 ### 1. Clone the Repository
 ```bash
-git clone <your-repo-url>
+git clone https://github.com/artypratham/RAGInspector.git
 cd RAGInspector
 ```
 

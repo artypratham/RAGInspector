@@ -28,5 +28,5 @@ export interface RecordData{
     input_schema: InputSchema
     extracted_fields: Record<string, ExtractedField>
     retrieved_context: RetrievedContext[]
-    metadata?: any
+    metadata?: Record<string, unknown>
 }

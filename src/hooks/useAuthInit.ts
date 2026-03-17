@@ -32,5 +32,5 @@ export function useAuthInit() {
       }
       setAuthVerified(true)
     })
-  }, [authVerified])
+  }, [authVerified, setAuthVerified, setIsAuthenticated, setUser])
 }

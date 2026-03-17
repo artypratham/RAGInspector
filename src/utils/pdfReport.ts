@@ -34,7 +34,7 @@ export function generatePDFReport(
 
       // Check for missing context
       const hasContext = record.retrieved_context && record.retrieved_context.length > 0
-        ? record.retrieved_context.some((ctx: any) => ctx.field_name === field)
+        ? record.retrieved_context.some((ctx) => ctx.field_name === field)
         : false;
       if (!hasContext) missingContextCount++;
     });
@@ -163,7 +163,8 @@ export function generatePDFReport(
     },
   });
 
-  yPosition = (doc as any).lastAutoTable.finalY + 15;
+  yPosition = // eslint-disable-next-line @typescript-eslint/no-explicit-any
+(doc as any).lastAutoTable.finalY + 15;
 
   // Diagnostic Framework
   if (yPosition > 250) {
@@ -264,7 +265,8 @@ export function generatePDFReport(
     },
   });
 
-  yPosition = (doc as any).lastAutoTable.finalY + 15;
+  yPosition = // eslint-disable-next-line @typescript-eslint/no-explicit-any
+(doc as any).lastAutoTable.finalY + 15;
 
   // Annotation Summary
   if (yPosition > 230) {
@@ -330,7 +332,8 @@ export function generatePDFReport(
       },
     });
 
-    yPosition = (doc as any).lastAutoTable.finalY + 15;
+    yPosition = // eslint-disable-next-line @typescript-eslint/no-explicit-any
+(doc as any).lastAutoTable.finalY + 15;
   }
 
   // Recommendations
@@ -384,7 +387,8 @@ export function generatePDFReport(
   });
 
   // Footer
-  const pageCount = (doc as any).internal.getNumberOfPages();
+  const pageCount = // eslint-disable-next-line @typescript-eslint/no-explicit-any
+(doc as any).internal.getNumberOfPages();
   for (let i = 1; i <= pageCount; i++) {
     doc.setPage(i);
     doc.setFontSize(8);
